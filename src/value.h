@@ -1,11 +1,17 @@
 #pragma once
-#include <variant>
-
-using IntegerT = int;
-using LongT = long;
+#include "type.h"
+#include <memory>
+#include <string>
 
 struct Value {
-    std::variant<std::string, float, double, IntegerT, LongT> value;
+    std::variant<std::string,
+                 float,
+                 double,
+                 IntegerT,
+                 LongT,
+                 std::shared_ptr<ClassInstance>,
+                 std::unique_ptr<ClassInstance>>
+        value;
 
     // Implement operator =()
 };

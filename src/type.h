@@ -1,12 +1,32 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <variant>
+
+using IntegerT = int;
+using LongT = long;
+
 struct Type {
     enum TypeName {
-        Variant,
+        String,
         Single,
         Double,
         Integer,
         Long,
-        String,
+        Class,
+        Struct,
     };
+
+    TypeName type = Integer;
 };
+
+class ClassInstance;
+
+using TypeVariantT = std::variant<std::string,
+                                  float,
+                                  double,
+                                  IntegerT,
+                                  LongT,
+                                  std::shared_ptr<ClassInstance>,
+                                  std::unique_ptr<ClassInstance>>;
