@@ -21,8 +21,16 @@ TEST_CASE("more complicated") {
 
     EXPECT_EQ(f.lines.size(), 1);
 
-    auto &line = f.lines;
+    auto &line = f.lines.front();
     EXPECT_EQ(line.size(), 5);
+}
+
+TEST_CASE("broken line") {
+    auto ss = std::istringstream{"broken _ \n line"};
+
+    const auto f = CodeFile{ss, "test"};
+    EXPECT_EQ(f.lines.size(), 1);
+    EXPECT_EQ(f.lines.back().size(), 2);
 }
 
 TEST_SUIT_END

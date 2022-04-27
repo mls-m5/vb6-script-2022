@@ -65,7 +65,25 @@ CodeFile::CodeFile(std::filesystem::path path) {
 
 void CodeFile::load(std::istream &stream, std::filesystem::path path) {
     int l = 1;
+
+    bool shouldMergeLines = false;
+
     for (std::string line; getline(stream, line); ++l) {
         lines.push_back(splitString(line, l));
+
+        if (shouldMergeLines) {
+            auto backLine = std::move(lines.back());
+            lines.pop_back();
+
+            for (auto &token : backLine) {
+                lines.back().push_back(token);
+            }
+            shouldMergeLines = false;
+        }
+
+        if (lines.back().back().content == "_") {
+            shouldMergeLines = true;
+            lines.back().pop_back();
+        }
     }
 }
