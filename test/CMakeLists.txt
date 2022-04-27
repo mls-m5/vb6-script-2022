@@ -23,7 +23,6 @@ function(test testname)
     target_include_directories(
         ${testname}_test
         PUBLIC
-        ../src
         )
 
     add_test(NAME ${testname}_test
@@ -33,3 +32,4 @@ endfunction()
 
 test(class)
 test(function)
+test(lexer)

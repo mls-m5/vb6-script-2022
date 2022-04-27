@@ -10,6 +10,7 @@ add_library(
     src/engine/value.cpp
     src/engine/context.cpp
     src/engine/functionbody.cpp
+    src/code/lexer.cpp
     )
 
 target_compile_features(
@@ -22,6 +23,8 @@ target_include_directories(
     vb6-script-2022-lib
     PUBLIC
     src/engine
+    src/code
+    src
     )
 
 add_executable(
