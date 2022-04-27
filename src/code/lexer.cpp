@@ -36,6 +36,10 @@ Line splitString(std::string str, size_t lineNum) {
     auto lastType = CharType::None;
 
     for (auto c : str) {
+        if (c == '\'') {
+            break;
+        }
+
         auto type = getType(c);
 
         if (lastType == Quotation) {

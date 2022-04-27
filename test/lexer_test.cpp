@@ -42,4 +42,13 @@ TEST_CASE("quotation") {
     EXPECT_EQ(f.lines.back().back().content, "\"hello\"");
 }
 
+TEST_CASE("comment") {
+    auto ss = std::istringstream{"hello ' there you"};
+
+    const auto f = CodeFile{ss, "test"};
+    EXPECT_EQ(f.lines.size(), 1);
+    EXPECT_EQ(f.lines.back().size(), 1);
+    EXPECT_EQ(f.lines.back().back().content, "hello");
+}
+
 TEST_SUIT_END
