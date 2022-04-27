@@ -32,3 +32,4 @@ function(test testname)
 endfunction()
 
 test(class)
+test(function)

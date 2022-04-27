@@ -1,5 +1,6 @@
 #include "classinstance.h"
 #include "classtype.h"
+#include "function.h"
 #include "mls-unit-test/unittest.h"
 
 TEST_SUIT_BEGIN

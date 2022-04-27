@@ -4,7 +4,6 @@
 class ClassInstance {
     ClassType *type = nullptr;
     std::vector<Value> memberValues;
-    std::vector<Function> memberFunctions;
 
     // Use public function create to create
     ClassInstance(ClassType *type)
