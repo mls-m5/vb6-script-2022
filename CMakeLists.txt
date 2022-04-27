@@ -5,17 +5,23 @@ project(vb6-script-2022)
 add_library(
     vb6-script-2022-lib
     STATIC
-    src/classtype.cpp
-    src/function.cpp
-    src/value.cpp
-    src/context.cpp
-    src/functionbody.cpp
+    src/engine/classtype.cpp
+    src/engine/function.cpp
+    src/engine/value.cpp
+    src/engine/context.cpp
+    src/engine/functionbody.cpp
     )
 
 target_compile_features(
     vb6-script-2022-lib
     PUBLIC
     cxx_std_17
+    )
+
+target_include_directories(
+    vb6-script-2022-lib
+    PUBLIC
+    src/engine
     )
 
 add_executable(
@@ -28,6 +34,7 @@ target_link_libraries(
     PUBLIC
     vb6-script-2022-lib
     )
+
 
 enable_testing()
 

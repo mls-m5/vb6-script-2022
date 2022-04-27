@@ -6,8 +6,13 @@ Saving execution time on reduced cache misses and extra indirections is a non
 goal. This program should just run my 2000 era visual basic programs.
 
 
+This time i will start from the other side of it compared to how I usually
+develop script engines. I use to start with the parser and work my way from
+there. This time i want to make the core engine work first, then when (if?) 
+that gets done i will do yet another parser.
 
-Design
+
+# Design
 
 ## Stack
 There is not really a stack. Every time there is a function call, a new
