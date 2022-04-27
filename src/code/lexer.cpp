@@ -87,6 +87,11 @@ void CodeFile::load(std::istream &stream, std::filesystem::path path) {
         ++l;
         lines.push_back(splitString(line, l));
 
+        if (lines.back().empty()) {
+            lines.pop_back();
+            continue;
+        }
+
         if (shouldMergeLines) {
             auto backLine = std::move(lines.back());
             lines.pop_back();

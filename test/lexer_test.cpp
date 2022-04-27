@@ -51,4 +51,11 @@ TEST_CASE("comment") {
     EXPECT_EQ(f.lines.back().back().content, "hello");
 }
 
+TEST_CASE("remove blank lines") {
+    auto ss = std::istringstream{"hello \n\n there you"};
+
+    const auto f = CodeFile{ss, "test"};
+    EXPECT_EQ(f.lines.size(), 2);
+}
+
 TEST_SUIT_END
