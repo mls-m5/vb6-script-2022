@@ -6,6 +6,7 @@ add_library(
     vb6-script-2022-lib
     STATIC
     src/classtype.cpp
+    src/function.cpp
     )
 
 target_compile_features(
