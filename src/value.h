@@ -4,24 +4,49 @@
 #include <string>
 
 struct Value {
-    std::variant<std::string,
-                 float,
-                 double,
-                 IntegerT,
-                 LongT,
-                 std::shared_ptr<ClassInstance>,
-                 std::unique_ptr<ClassInstance>>
+    std::variant<std::string, float, double, IntegerT, LongT, ClassT, StructT>
         value;
 
     Value() = default;
     Value(Value &&) = default;
-    Value(const Value &) = delete;
+    Value(const Value &) = default;
     Value &operator=(Value &&) = default;
-    Value &operator=(const Value &) = delete;
+    Value &operator=(const Value &) = default;
     ~Value() = default;
 
     Value(IntegerT i)
         : value{i} {}
+
+    Value(std::string str)
+        : value{std::move(str)} {}
+
+    Value(double d)
+        : value{d} {}
+
+    Value(LongT l)
+        : value{l} {}
+
+    Value(std::shared_ptr<ClassInstance> i)
+        : value{std::move(i)} {}
+
+    Value(std::unique_ptr<ClassInstance> i)
+        : value{std::move(i)} {}
+
+    static Value create(Type type);
+
+    template <typename T>
+    auto &get() {
+        return std::get<T>(value);
+    }
+
+    template <typename T>
+    auto &get() const {
+        return std::get<T>(value);
+    }
+
+    Type::TypeName type() const {
+        return static_cast<Type::TypeName>(value.index());
+    }
 
     // Implement operator =()
 };

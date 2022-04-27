@@ -1,6 +1,7 @@
 #pragma once
 
 #include "classinstance.h"
+#include "context.h"
 #include "type.h"
 #include "value.h"
 #include <functional>
@@ -15,34 +16,10 @@ struct FunctionArgument {
 
 struct FunctionArguments : public std::vector<FunctionArgument> {};
 
-struct FunctionArgumentValue {
-    std::variant<Value, Value *> value;
-
-    Value &get() {
-        if (value.index()) {
-            return *std::get<Value *>(value);
-        }
-        else {
-            return std::get<Value>(value);
-        }
-    }
-
-    const Value &get() const {
-        if (value.index()) {
-            return *std::get<Value *>(value);
-        }
-        else {
-            return std::get<Value>(value);
-        }
-    }
-};
-
-// First argument is "this"-argument
-using FunctionArgumentValues = std::vector<FunctionArgumentValue>;
-
 class Function {
 public:
-    using FuncT = std::function<Value(const FunctionArgumentValues &)>;
+    using FuncT = std::function<Value(const FunctionArgumentValues &,
+                                      LocalContext &context)>;
 
 private:
     std::string name;
@@ -55,5 +32,5 @@ public:
         , arguments{std::move(args)}
         , f{f} {}
 
-    Value call(const FunctionArgumentValues &args);
+    Value call(const FunctionArgumentValues &args, LocalContext &context);
 };

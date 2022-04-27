@@ -7,6 +7,9 @@ add_library(
     STATIC
     src/classtype.cpp
     src/function.cpp
+    src/value.cpp
+    src/context.cpp
+    src/functionbody.cpp
     )
 
 target_compile_features(

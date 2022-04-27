@@ -4,8 +4,20 @@
 #include <string>
 #include <variant>
 
+class ClassInstance;
+
 using IntegerT = int;
 using LongT = long;
+using ClassT = std::shared_ptr<ClassInstance>;
+
+struct StructT : std::unique_ptr<ClassInstance> {
+    StructT() = default;
+    StructT(StructT &&) = default;
+    StructT &operator=(StructT &&) = default;
+
+    StructT(const StructT &other);
+    StructT &operator=(const StructT &other);
+};
 
 struct Type {
     enum TypeName {
@@ -20,8 +32,6 @@ struct Type {
 
     TypeName type = Integer;
 };
-
-class ClassInstance;
 
 using TypeVariantT = std::variant<std::string,
                                   float,

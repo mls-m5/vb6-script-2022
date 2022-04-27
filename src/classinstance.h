@@ -11,6 +11,10 @@ class ClassInstance {
         memberValues.resize(type->variables.size());
     }
 
+    ClassInstance(ClassType *type, std::vector<Value> values)
+        : type{type}
+        , memberValues{std::move(values)} {}
+
 public:
     size_t getMemberIndex(std::string_view name) const {
         for (size_t i = 0; i < type->variables.size(); ++i) {
@@ -38,5 +42,10 @@ public:
         // Using "new" here because the compiler complains about constructor
         // being private otherwise
         return std::unique_ptr<ClassInstance>(new ClassInstance(type));
+    }
+
+    std::unique_ptr<ClassInstance> clone() {
+        return std::unique_ptr<ClassInstance>(
+            new ClassInstance(type, memberValues));
     }
 };
