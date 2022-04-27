@@ -3,14 +3,14 @@
 
 TEST_SUIT_BEGIN
 
-TEST_CASE("instantiate class") {
+TEST_CASE("basic function call") {
     auto a = -1, b = -1, c = -1;
 
     auto lambda = [&](const FunctionArgumentValues &args,
                       LocalContext &context) -> Value {
-        a = std::get<IntegerT>(args.at(0).get().value);
-        b = std::get<IntegerT>(args.at(1).get().value);
-        c = std::get<IntegerT>(args.at(2).get().value);
+        a = args.at(0).get().get<IntegerT>();
+        b = args.at(1).get().get<IntegerT>();
+        c = args.at(2).get().get<IntegerT>();
         return 120;
     };
 
