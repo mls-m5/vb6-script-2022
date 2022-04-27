@@ -11,6 +11,8 @@ add_library(
     src/engine/context.cpp
     src/engine/functionbody.cpp
     src/code/lexer.cpp
+    src/code/parser.cpp
+    src/code/token.cpp
     )
 
 target_compile_features(
