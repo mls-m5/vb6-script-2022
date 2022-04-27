@@ -9,9 +9,13 @@ enum CharType {
     Alpha,
     Num,
     Space,
+    Quotation,
 };
 
 CharType getType(char c) {
+    if (c == '"') {
+        return Quotation;
+    }
     if (std::isspace(c)) {
         return Space;
     }
@@ -34,6 +38,14 @@ Line splitString(std::string str, size_t lineNum) {
     for (auto c : str) {
         auto type = getType(c);
 
+        if (lastType == Quotation) {
+            line.back().content.push_back(c);
+            if (type == Quotation) {
+                lastType = None;
+            }
+            continue;
+        }
+
         if (type == Space) {
             lastType = Space;
             continue;
@@ -47,7 +59,6 @@ Line splitString(std::string str, size_t lineNum) {
         }
 
         lastType = type;
-        ++lineNum;
     }
 
     return line;
@@ -64,11 +75,12 @@ CodeFile::CodeFile(std::filesystem::path path) {
 }
 
 void CodeFile::load(std::istream &stream, std::filesystem::path path) {
-    int l = 1;
+    int l = 0;
 
     bool shouldMergeLines = false;
 
     for (std::string line; getline(stream, line); ++l) {
+        ++l;
         lines.push_back(splitString(line, l));
 
         if (shouldMergeLines) {

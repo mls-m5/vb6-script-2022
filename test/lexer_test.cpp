@@ -33,4 +33,13 @@ TEST_CASE("broken line") {
     EXPECT_EQ(f.lines.back().size(), 2);
 }
 
+TEST_CASE("quotation") {
+    auto ss = std::istringstream{"\"hello\""};
+
+    const auto f = CodeFile{ss, "test"};
+    EXPECT_EQ(f.lines.size(), 1);
+    EXPECT_EQ(f.lines.back().size(), 1);
+    EXPECT_EQ(f.lines.back().back().content, "\"hello\"");
+}
+
 TEST_SUIT_END
