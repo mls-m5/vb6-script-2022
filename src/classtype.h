@@ -1,4 +1,5 @@
 #pragma once
+#include "function.h"
 #include "type.h"
 #include "value.h"
 #include "vbruntimeerror.h"
@@ -13,6 +14,14 @@ struct MemberVariable {
 class ClassType {
     std::string name;
     std::vector<MemberVariable> variables;
+
+public:
+    void addAddVariable(std::string name, Type variable) {
+        variables.push_back(MemberVariable{
+            std::move(name),
+            std::move(variable),
+        });
+    }
 
     friend class ClassInstance;
 };

@@ -13,5 +13,15 @@ struct Value {
                  std::unique_ptr<ClassInstance>>
         value;
 
+    Value() = default;
+    Value(Value &&) = default;
+    Value(const Value &) = delete;
+    Value &operator=(Value &&) = default;
+    Value &operator=(const Value &) = delete;
+    ~Value() = default;
+
+    Value(IntegerT i)
+        : value{i} {}
+
     // Implement operator =()
 };
