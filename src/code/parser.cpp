@@ -62,20 +62,34 @@ ExpressionT parseExpression(TokenPair token, NextTokenT nextToken) {
     }
 }
 
-FunctionBody::CommandT parseCommand(Token *token, NextTokenT nextToken) {
+FunctionBody::CommandT parseMethodCall(TokenPair, NextTokenT nextToken) {
+    // Todo: Actually implement this
+    return [](LocalContext &context) {
+        std::cout << "method call" << std::endl; //
+        context.globalContext.set("test", Value{IntegerT{10}});
+    };
+}
+
+//! A command is a line inside a function that starts at the beginning of the
+//! line
+FunctionBody::CommandT parseCommand(TokenPair token, NextTokenT nextToken) {
     auto next = nextToken();
-    switch (token->type()) {
+    switch (token.first->type()) {
     case Token::Print: {
-        parseAssert(next.first, *token, "expected expression");
+        parseAssert(token.second, *token.first, "expected expression");
         auto expr = parseExpression(next, nextToken);
 
         return [expr](LocalContext &context) {
             std::cout << expr(context).toString() << std::endl; //
         };
     } break;
+
+    case Token::NotKeyword:
+        // Todo: Handle other cases, like assignments and stuff
+        return parseMethodCall(next, nextToken);
     default:
 
-        throw VBParsingError{*token, "unexpected command"};
+        throw VBParsingError{*token.first, "unexpected command"};
     }
 
     return {};
@@ -103,7 +117,7 @@ std::unique_ptr<Function> parseFunction(Line *line,
         if (keyWord == Token::End) {
             break;
         }
-        body->pushCommand(parseCommand(token.first, nextToken));
+        body->pushCommand(parseCommand(token, nextToken));
     }
 
     Function::FuncT f = [body](const FunctionArgumentValues &args,
