@@ -22,4 +22,22 @@ End Sub
     f.call(context.args, context.local);
 }
 
+TEST_CASE("ignore option statements") {
+    auto ss = std::istringstream{R"_(
+Option Explicit
+
+Private Sub Main()
+    Print "hello there"
+End Sub
+)_"};
+
+    auto module = parse(ss, "");
+
+    auto context = TestContext{};
+
+    auto &f = module.function("Main");
+
+    f.call(context.args, context.local);
+}
+
 TEST_SUIT_END

@@ -14,7 +14,8 @@ enum Scope {
     None,
 };
 
-using NextTokenT = std::function<std::pair<Token *, Token *>()>;
+using TokenPair = std::pair<Token *, Token *>;
+using NextTokenT = std::function<TokenPair()>;
 using NextLineT = std::function<Line *()>;
 using ExpressionT = std::function<Value(LocalContext &)>;
 
@@ -34,15 +35,31 @@ FunctionArguments parseArguments(NextTokenT nextToken) {
     return args;
 }
 
-ExpressionT parseExpression(Token &token, NextTokenT nextToken) {
-    auto keyword = token.type();
+ExpressionT parseExpression(TokenPair token, NextTokenT nextToken) {
+    auto keyword = token.first->type();
+
+    ExpressionT expr;
 
     switch (keyword) {
     case Token::StringLiteral:
-        return [str = token.content](LocalContext &) { return Value{str}; };
+        expr = [str = token.first->content](LocalContext &) {
+            return Value{str};
+        };
+        break;
     default:
-        throw VBParsingError{token, "unexpected token " + token.content};
+        throw VBParsingError{*token.first,
+                             "unexpected token " + token.first->content};
     };
+
+    if (!token.second) {
+        return expr;
+    }
+
+    // Todo: Handle for exemple binary expressions
+    switch (token.second->type()) {
+    default:
+        return expr;
+    }
 }
 
 FunctionBody::CommandT parseCommand(Token *token, NextTokenT nextToken) {
@@ -50,7 +67,7 @@ FunctionBody::CommandT parseCommand(Token *token, NextTokenT nextToken) {
     switch (token->type()) {
     case Token::Print: {
         parseAssert(next.first, *token, "expected expression");
-        auto expr = parseExpression(*next.first, nextToken);
+        auto expr = parseExpression(next, nextToken);
 
         return [expr](LocalContext &context) {
             std::cout << expr(context).toString() << std::endl; //
@@ -124,6 +141,8 @@ Module parseGlobal(Line *line, NextTokenT nextToken, NextLineT nextLine) {
                 parseFunction(line, Private, nextToken, nextLine));
             continue;
             break;
+        case Token::Option:
+            continue; // Skip option statements, assume Option Explicit
         default:
             throw VBParsingError{*token.first,
                                  "unexpected token at global scope"};
