@@ -7,7 +7,13 @@
 
 struct Token {
 #define TOKEN_KEYWORD(x) x,
-    enum Keyword { NotKeyword, EOFKeyword, TOKEN_KEYWORD_LIST };
+    enum Keyword {
+        NotKeyword,
+        Empty,
+        StringLiteral,
+        EOFKeyword,
+        TOKEN_KEYWORD_LIST
+    };
 #undef TOKEN_KEYWORD
 
     std::string content;

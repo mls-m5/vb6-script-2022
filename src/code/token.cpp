@@ -17,6 +17,15 @@ bool iCompare(std::string_view lowerString, std::string ordinary) {
 }
 
 Token::Keyword getKeyword(std::string name) {
+
+    if (name.empty()) {
+        return Token::Empty;
+    }
+
+    if (name.front() == '"') {
+        return Token::StringLiteral;
+    }
+
     name = toLower(name);
 
 #define TOKEN_KEYWORD(x) {toLower(#x), Token::x},

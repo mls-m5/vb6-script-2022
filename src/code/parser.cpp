@@ -4,6 +4,7 @@
 #include "lexer.h"
 #include "vbparsingerror.h"
 #include <functional>
+#include <iostream>
 
 namespace {
 
@@ -15,6 +16,15 @@ enum Scope {
 
 using NextTokenT = std::function<std::pair<Token *, Token *>()>;
 using NextLineT = std::function<Line *()>;
+using ExpressionT = std::function<Value(LocalContext &)>;
+
+void parseAssert(bool condition,
+                 const Token &location,
+                 std::string_view message = "parsing error") {
+    if (!condition) {
+        throw VBParsingError{location, std::string{message}};
+    }
+}
 
 FunctionArguments parseArguments(NextTokenT nextToken) {
     auto args = FunctionArguments{};
@@ -24,7 +34,33 @@ FunctionArguments parseArguments(NextTokenT nextToken) {
     return args;
 }
 
+ExpressionT parseExpression(Token &token, NextTokenT nextToken) {
+    auto keyword = token.keyword();
+
+    switch (keyword) {
+    case Token::StringLiteral:
+        return [str = token.content](LocalContext &) -> Value { return {str}; };
+    default:
+        throw VBParsingError{token, "unexpected token " + token.content};
+    };
+}
+
 FunctionBody::CommandT parseCommand(Token *token, NextTokenT nextToken) {
+    auto next = nextToken();
+    switch (token->keyword()) {
+    case Token::Print: {
+        parseAssert(next.first, *token, "expected expression");
+        auto expr = parseExpression(*next.first, nextToken);
+
+        return [expr](LocalContext &context) {
+            std::cout << expr(context).toString() << std::endl; //
+        };
+    } break;
+    default:
+
+        throw VBParsingError{*token, "unexpected command"};
+    }
+
     return {};
 }
 

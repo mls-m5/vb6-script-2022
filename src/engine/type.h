@@ -6,6 +6,8 @@
 
 class ClassInstance;
 
+using SingleT = float;
+using DoubleT = double;
 using IntegerT = int;
 using LongT = long;
 using ClassT = std::shared_ptr<ClassInstance>;

@@ -9,7 +9,7 @@ TEST_CASE("basic parsing") {
     auto ss = std::istringstream{R"_(
 
 Private Sub Main()
-
+    Print "hello there"
 End Sub
 )_"};
 

@@ -4,8 +4,9 @@
 #include <string>
 
 struct Value {
-    std::variant<std::string, float, double, IntegerT, LongT, ClassT, StructT>
-        value;
+    std::
+        variant<std::string, SingleT, DoubleT, IntegerT, LongT, ClassT, StructT>
+            value;
 
     Value() = default;
     Value(Value &&) = default;
@@ -47,6 +48,8 @@ struct Value {
     Type::TypeName type() const {
         return static_cast<Type::TypeName>(value.index());
     }
+
+    std::string toString() const;
 
     // Set value and change type at the same time
     //    void setAny(const Value &other) {
