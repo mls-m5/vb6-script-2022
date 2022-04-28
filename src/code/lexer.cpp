@@ -79,12 +79,11 @@ CodeFile::CodeFile(std::filesystem::path path) {
 }
 
 void CodeFile::load(std::istream &stream, std::filesystem::path path) {
-    int l = 0;
+    int l = 1;
 
     bool shouldMergeLines = false;
 
     for (std::string line; getline(stream, line); ++l) {
-        ++l;
         lines.push_back(splitString(line, l));
 
         if (lines.back().empty()) {
@@ -105,6 +104,14 @@ void CodeFile::load(std::istream &stream, std::filesystem::path path) {
         if (lines.back().back().content == "_") {
             shouldMergeLines = true;
             lines.back().pop_back();
+        }
+    }
+
+    auto commonPath = std::make_shared<std::filesystem::path>(path);
+
+    for (auto &line : lines) {
+        for (auto &token : line) {
+            token.loc.path = commonPath;
         }
     }
 }

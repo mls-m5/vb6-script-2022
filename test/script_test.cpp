@@ -12,7 +12,12 @@ auto inner =
             throw std::runtime_error{
                 "assert called with wrong number of arguments"};
         }
-        auto arg = args.at(0).get().get<IntegerT>();
+
+        auto &value = args.at(0).get();
+        auto index = value.value.index();
+
+        std::cout << value.toString() << std::endl;
+        auto arg = value.get<IntegerT>();
         if (!arg) {
             throw std::runtime_error{"assertion failed"};
         }

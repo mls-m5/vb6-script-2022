@@ -1,5 +1,7 @@
 #pragma once
 
+#include <filesystem>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -7,6 +9,7 @@
 
 struct Location {
     size_t line = 0;
+    std::shared_ptr<std::filesystem::path> path;
 };
 
 struct Token {

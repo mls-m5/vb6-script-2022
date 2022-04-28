@@ -1,6 +1,10 @@
 #include "functionbody.h"
 #include "classinstance.h"
 
+Type FunctionBody::variable(int i) {
+    return localVariables.at(i);
+}
+
 void FunctionBody::pushLocalVariable(Type t) {
     localVariables.push_back(t);
 }

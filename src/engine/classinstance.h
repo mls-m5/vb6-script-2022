@@ -2,40 +2,56 @@
 #include "classtype.h"
 
 class ClassInstance {
-    ClassType *type = nullptr;
-    std::vector<Value> memberValues;
+    ClassType *_type = nullptr;
+    std::vector<Value> _memberValues;
 
     // Use public function create to create
     ClassInstance(ClassType *type)
-        : type{type} {
-        memberValues.resize(type->variables.size());
+        : _type{type} {
+        _memberValues.resize(type->variables.size());
     }
 
     ClassInstance(ClassType *type, std::vector<Value> values)
-        : type{type}
-        , memberValues{std::move(values)} {}
+        : _type{type}
+        , _memberValues{std::move(values)} {}
 
 public:
     size_t getMemberIndex(std::string_view name) const {
-        for (size_t i = 0; i < type->variables.size(); ++i) {
-            auto &v = type->variables.at(i);
+        for (size_t i = 0; i < _type->variables.size(); ++i) {
+            auto &v = _type->variables.at(i);
             if (v.name == name) {
                 return i;
             }
         }
 
         throw VBRuntimeError{"member " + std::string{name} +
-                             " does not exist on type " + type->name};
+                             " does not exist on type " + _type->name};
     }
 
     void set(std::string_view name, Value value) {
         auto i = getMemberIndex(name);
-        auto &v = memberValues.at(i);
+        auto &v = _memberValues.at(i);
         v = std::move(value);
     }
 
+    void set(size_t i, Value value) {
+        _memberValues.at(i) = std::move(value);
+    }
+
     const Value &get(std::string_view name) const {
-        return memberValues.at(getMemberIndex(name));
+        return get(getMemberIndex(name));
+    }
+
+    const Value &get(size_t i) const {
+        return _memberValues.at(i);
+    }
+
+    Value &get(std::string_view name) {
+        return get(getMemberIndex(name));
+    }
+
+    Value &get(size_t i) {
+        return _memberValues.at(i);
     }
 
     static std::unique_ptr<ClassInstance> create(ClassType *type) {
@@ -46,6 +62,10 @@ public:
 
     std::unique_ptr<ClassInstance> clone() {
         return std::unique_ptr<ClassInstance>(
-            new ClassInstance(type, memberValues));
+            new ClassInstance(_type, _memberValues));
+    }
+
+    ClassType *type() {
+        return _type;
     }
 };

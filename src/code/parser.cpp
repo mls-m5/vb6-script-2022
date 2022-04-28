@@ -2,6 +2,7 @@
 #include "engine/function.h"
 #include "functionbody.h"
 #include "lexer.h"
+#include "parsetypes.h"
 #include "vbparsingerror.h"
 #include <filesystem>
 #include <fstream>
@@ -34,7 +35,7 @@ struct TokenPair {
 
     FunctionBody *currentFunctionBody = nullptr;
     std::vector<std::string> namedLocalVariables;
-    std::vector<std::string> namedArguments;
+    std::vector<std::pair<std::string, Type>> namedArguments;
 
     void endFunction() {
         currentFunctionBody = nullptr;
@@ -55,7 +56,7 @@ struct TokenPair {
     // Get index to argument in current context
     int argument(std::string_view name) {
         for (size_t i = 0; i < namedArguments.size(); ++i) {
-            if (namedArguments.at(i) == name) {
+            if (namedArguments.at(i).first == name) {
                 return i;
             }
         }
@@ -85,7 +86,8 @@ struct TokenPair {
 };
 
 using NextLineT = std::function<Line *()>;
-using ExpressionT = std::function<Value(LocalContext &)>;
+using ExpressionT = std::function<ValueOrRef(LocalContext &)>;
+using IdentifierFuncT = std::function<Value &(LocalContext &context)>;
 
 void parseAssert(bool condition,
                  const Location &location,
@@ -103,12 +105,22 @@ Type parseAsStatement(TokenPair &token) {
         throw VBParsingError{loc, "expected typename"};
     }
 
-    auto type = token.first->type();
+    auto type = parseType(token.type());
 
-    token.next();
-    //    std::cout << type << std::endl;
-    // TODO: Implement types
-    return Type{Type::Integer};
+    if (type) {
+        token.next();
+        return *type;
+    }
+
+    // Todo: Make sure to check types in other modules aswell
+    auto structType = token.currentModule->structType(token.content());
+
+    if (structType) {
+        token.next();
+        return Type{Type::Struct, structType};
+    }
+
+    throw VBParsingError{token.lastLoc, "No such type: " + token.content()};
 }
 
 FunctionArguments parseArguments(TokenPair &token) {
@@ -135,7 +147,7 @@ FunctionArguments parseArguments(TokenPair &token) {
                                                 : Type{Type::Integer};
 
         args.push_back({type, name});
-        token.namedArguments.push_back(name);
+        token.namedArguments.push_back({name, type});
 
         if (token.content() == ",") {
             shouldContinue = true;
@@ -148,32 +160,67 @@ FunctionArguments parseArguments(TokenPair &token) {
     return args;
 }
 
-std::function<Value &(LocalContext &context)> parseIdentifier(
-    TokenPair &token) {
+IdentifierFuncT parseMemberAccessor(TokenPair &token,
+                                    IdentifierFuncT base,
+                                    Type type) {
+    token.next();
+
+    if (type.type == Type::Struct) {
+        auto memberIndex = type.classType->getVariableIndex(token.content());
+        return [base, memberIndex](LocalContext &context) -> Value & {
+            auto &baseVar = base(context);
+            auto &s = baseVar.get<StructT>();
+
+            return s->get(memberIndex);
+        };
+    }
+
+    // TODO: Implement class accessor
+
+    throw VBParsingError{
+        token.lastLoc,
+        "cannot access member of non object (ie not struct or class)"};
+}
+
+IdentifierFuncT parseIdentifier(TokenPair &token) {
     auto loc = token.first->loc;
     auto name = token.first->content;
 
     token.next();
 
+    auto expr = IdentifierFuncT{};
+
+    auto type = Type{};
+
     if (auto index = token.localVariable(name); index != -1) {
-        return [index](LocalContext &context) -> Value & {
+        type = token.currentFunctionBody->variable(index);
+        expr = [index](LocalContext &context) -> Value & {
             return context.localVariables.at(index);
         };
     }
-
-    if (auto index = token.argument(name); index != -1) {
-        return [index](LocalContext &context) -> Value & {
+    else if (auto index = token.argument(name); index != -1) {
+        type = token.namedArguments.at(index).second;
+        expr = [index](LocalContext &context) -> Value & {
             return context.args.at(index).get();
         };
     }
-
-    if (auto index = token.currentModule->staticVariable(name); index != -1) {
-        return [index](LocalContext &context) -> Value & {
+    else if (auto index = token.currentModule->staticVariable(name);
+             index != -1) {
+        type = token.currentModule->staticVariables.at(index).second.type();
+        expr = [index](LocalContext &context) -> Value & {
             return context.module->staticVariables.at(index).second;
         };
     }
 
-    throw VBParsingError{loc, "could not find variable " + name};
+    if (!expr) {
+        throw VBParsingError{loc, "could not find variable " + name};
+    }
+
+    if (token.content() != ".") {
+        return expr;
+    }
+
+    return parseMemberAccessor(token, expr, type);
 }
 
 ExpressionT parseExpression(TokenPair &token) {
@@ -184,19 +231,22 @@ ExpressionT parseExpression(TokenPair &token) {
     switch (keyword) {
     case Token::StringLiteral:
         expr = [str = token.first->content](LocalContext &) {
-            return Value{str};
+            return ValueOrRef{{str}};
         };
         break;
     case Token::NumberLiteral:
         // Todo: Handle floating point
         expr = [i = std::stoi(token.first->content)](LocalContext &) {
-            return Value{IntegerT{i}};
+            return ValueOrRef{{IntegerT{i}}};
         };
         break;
 
-    case Token::Word:
-        expr = parseIdentifier(token);
-        break;
+    case Token::Word: {
+        auto id = parseIdentifier(token);
+        expr = [id](LocalContext &context) {
+            return ValueOrRef{&id(context)}; //
+        };
+    } break;
     default:
         throw VBParsingError{*token.first,
                              "unexpected token " + token.first->content};
@@ -261,7 +311,7 @@ FunctionArgumentValues evaluateArgumentList(
 
     for (auto &arg : args) {
         // TODO: Handle references
-        values.push_back(FunctionArgumentValue{arg(context)});
+        values.push_back(ValueOrRef{arg(context)});
     }
 
     return values;
@@ -356,7 +406,8 @@ FunctionBody::CommandT parseAssignment(TokenPair &token) {
     auto expr = parseExpression(token);
 
     return [target, expr](LocalContext &context) {
-        target(context) = expr(context);
+        target(context) = expr(context).get();
+        std::cout << target(context).toString() << std::endl;
     };
 }
 
@@ -370,7 +421,7 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         auto expr = parseExpression(token);
 
         return [expr](LocalContext &context) {
-            std::cout << expr(context).toString() << std::endl; //
+            std::cout << expr(context).get().toString() << std::endl; //
         };
     } break;
 
@@ -386,6 +437,9 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         if (type2 == Token::Operator) {
             return parseAssignment(token);
         }
+        else if (token.second && token.second->content == ".") {
+            return parseIdentifier(token);
+        }
         else {
             return parseMethodCall(token);
         }
@@ -399,6 +453,41 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
     return {};
 }
 
+void parseStruct(Line *line,
+                 Scope scope,
+                 TokenPair &token,
+                 NextLineT nextLine) {
+    token.next();
+    auto name = token.content();
+
+    auto &structType = token.currentModule->addStruct(name);
+
+    for (line = nextLine(); line; line = nextLine()) {
+        token.next();
+        auto keyword = token.type();
+        if (keyword == Token::End) {
+            break;
+        }
+
+        if (token.type() != Token::Word) {
+            throw VBParsingError{token.lastLoc,
+                                 "Unexpected token " + token.content()};
+        }
+
+        auto memberName = token.content();
+
+        token.next();
+        if (token.type() != Token::As) {
+            throw VBParsingError{token.lastLoc,
+                                 "Expected As got " + token.content()};
+        }
+
+        auto type = parseAsStatement(token);
+
+        structType.addAddVariable(memberName, type);
+    }
+}
+
 std::unique_ptr<Function> parseFunction(Line *line,
                                         Scope scope,
                                         TokenPair &token,
@@ -406,7 +495,7 @@ std::unique_ptr<Function> parseFunction(Line *line,
 
     token.next();
 
-    auto name = token.first;
+    auto name = token.content();
 
     token.next();
 
@@ -433,8 +522,7 @@ std::unique_ptr<Function> parseFunction(Line *line,
         return body->call(args, context);
     };
 
-    auto function =
-        std::make_unique<Function>(name->content, std::move(arguments), f);
+    auto function = std::make_unique<Function>(name, std::move(arguments), f);
 
     token.endFunction();
 
@@ -472,6 +560,9 @@ Module parseGlobal(Line *line, NextTokenT nextToken, NextLineT nextLine) {
             continue; // Skip option statements, assume Option Explicit
         case Token::Dim:
             parseMemberDeclaration(token);
+            continue;
+        case Token::Structure:
+            parseStruct(line, currentScope, token, nextLine);
             continue;
         default:
             throw VBParsingError{*token.first,

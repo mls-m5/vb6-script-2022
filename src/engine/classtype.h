@@ -13,11 +13,12 @@ struct MemberVariable {
 class Function;
 
 class ClassType {
+public:
     std::string name;
     std::vector<MemberVariable> variables;
-    std::vector<std::unique_ptr<Function>> memberFunctions;
+    struct Module *module = nullptr;
+    bool isStruct = false;
 
-public:
     ~ClassType();
 
     void addAddVariable(std::string name, Type variable) {
@@ -25,6 +26,15 @@ public:
             std::move(name),
             std::move(variable),
         });
+    }
+
+    int getVariableIndex(std::string_view name) {
+        for (size_t i = 0; i < variables.size(); ++i) {
+            if (variables.at(i).name == name) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     friend class ClassInstance;

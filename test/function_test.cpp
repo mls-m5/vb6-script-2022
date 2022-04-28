@@ -52,7 +52,7 @@ TEST_CASE("basic function body") {
 
     auto ret = body.call({}, dummyContext);
 
-    ASSERT_EQ(ret.type(), Type::Integer);
+    ASSERT_EQ(ret.typeName(), Type::Integer);
     ASSERT_EQ(ret.get<IntegerT>(), 20);
 }
 

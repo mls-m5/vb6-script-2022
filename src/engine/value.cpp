@@ -14,16 +14,30 @@ Value Value::create(Type type) {
     case Type::Integer:
         return Value{IntegerT{0}};
     case Type::Class:
-        return Value{std::shared_ptr<ClassInstance>{}};
+        return Value{ClassInstance::create(type.classType)};
     case Type::Struct:
-        return Value{std::unique_ptr<ClassInstance>{}};
+        return Value{StructT{type.classType}};
     }
 
     return {};
 }
 
+Type Value::type() const {
+    auto type = typeName();
+    ClassType *classType = nullptr;
+
+    if (type == Type::Struct) {
+        classType = get<StructT>().get()->type();
+    }
+    else if (type == Type::Class) {
+        classType = get<ClassT>().get()->type();
+    }
+
+    return {type, classType};
+}
+
 std::string Value::toString() const {
-    switch (type()) {
+    switch (typeName()) {
     case Type::String:
         return get<std::string>();
     case Type::Single:

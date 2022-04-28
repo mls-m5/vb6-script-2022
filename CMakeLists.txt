@@ -14,6 +14,7 @@ add_library(
     src/code/lexer.cpp
     src/code/parser.cpp
     src/code/token.cpp
+    src/code/parsetypes.cpp
     )
 
 target_compile_features(

@@ -21,16 +21,19 @@ struct Value {
     Value(std::string str)
         : value{std::move(str)} {}
 
-    Value(double d)
+    Value(SingleT d)
+        : value{d} {}
+
+    Value(DoubleT d)
         : value{d} {}
 
     Value(LongT l)
         : value{l} {}
 
-    Value(std::shared_ptr<ClassInstance> i)
+    Value(ClassT i)
         : value{std::move(i)} {}
 
-    Value(std::unique_ptr<ClassInstance> i)
+    Value(StructT i)
         : value{std::move(i)} {}
 
     static Value create(Type type);
@@ -45,9 +48,11 @@ struct Value {
         return std::get<T>(value);
     }
 
-    Type::TypeName type() const {
+    Type::TypeName typeName() const {
         return static_cast<Type::TypeName>(value.index());
     }
+
+    Type type() const;
 
     std::string toString() const;
 

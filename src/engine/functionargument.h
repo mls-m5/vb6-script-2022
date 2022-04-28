@@ -3,7 +3,7 @@
 #include "value.h"
 #include <vector>
 
-struct FunctionArgumentValue {
+struct ValueOrRef {
     std::variant<Value, Value *> value;
 
     Value &get() {
@@ -26,4 +26,4 @@ struct FunctionArgumentValue {
 };
 
 // First argument is "this"-argument
-using FunctionArgumentValues = std::vector<FunctionArgumentValue>;
+using FunctionArgumentValues = std::vector<ValueOrRef>;

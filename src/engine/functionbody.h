@@ -14,6 +14,8 @@ private:
     Value returnValue;
 
 public:
+    Type variable(int i);
+
     void pushLocalVariable(Type t);
 
     void pushCommand(const CommandT &t);
