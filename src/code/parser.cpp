@@ -26,6 +26,7 @@ struct TokenPair {
 
     NextTokenT f;
 
+    Location lastLoc; // Last valid code location
     Token *first = nullptr;
     Token *second = nullptr;
 
@@ -33,6 +34,13 @@ struct TokenPair {
 
     FunctionBody *currentFunctionBody = nullptr;
     std::vector<std::string> namedLocalVariables;
+    std::vector<std::string> namedArguments;
+
+    void endFunction() {
+        currentFunctionBody = nullptr;
+        namedLocalVariables.clear();
+        namedArguments.clear();
+    }
 
     int localVariable(std::string_view name) {
         for (size_t i = 0; i < namedLocalVariables.size(); ++i) {
@@ -44,8 +52,22 @@ struct TokenPair {
         return -1;
     }
 
+    // Get index to argument in current context
+    int argument(std::string_view name) {
+        for (size_t i = 0; i < namedArguments.size(); ++i) {
+            if (namedArguments.at(i) == name) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
     TokenPair &next() {
         std::tie(first, second) = f();
+        if (first) {
+            lastLoc = first->loc;
+        }
         return *this;
     }
 
@@ -53,12 +75,12 @@ struct TokenPair {
         return first;
     }
 
-    const std::string &content() const {
-        return first->content;
+    std::string content() const {
+        return first ? first->content : "";
     }
 
     Token::Keyword type() const {
-        return first->type();
+        return first ? first->type() : Token::Empty;
     }
 };
 
@@ -73,24 +95,66 @@ void parseAssert(bool condition,
     }
 }
 
+Type parseAsStatement(TokenPair &token) {
+    auto loc = token.first->loc;
+    token.next();
+
+    if (!token.first) {
+        throw VBParsingError{loc, "expected typename"};
+    }
+
+    auto type = token.first->type();
+    //    std::cout << type << std::endl;
+    // TODO: Implement types
+    return Type{Type::Integer};
+}
+
 FunctionArguments parseArguments(TokenPair &token) {
+    if (!token || token.first->content != "(") {
+        throw VBParsingError{token.lastLoc,
+                             "expected character '(' got " + token.content()};
+    }
+
     auto args = FunctionArguments{};
 
-    // TODO: Parse arguments here
+    // TODO: Handle ByRef and ByVal
+
+    token.next();
+
+    if (token.content() == ")") {
+        return args;
+    }
+
+    auto name = token.content();
+    token.next();
+
+    auto type = (token.type() == Token::As) ? parseAsStatement(token)
+                                            : Type{Type::Integer};
+
+    args.push_back({type, name});
+    token.namedArguments.push_back(name);
+
+    // TODO: Parse the whole list separated by ','
 
     return args;
 }
 
 std::function<Value &(LocalContext &context)> parseIdentifier(
     TokenPair &token) {
+    auto loc = token.first->loc;
     auto name = token.first->content;
 
     token.next();
 
     if (auto index = token.localVariable(name); index != -1) {
-
         return [index](LocalContext &context) -> Value & {
             return context.localVariables.at(index);
+        };
+    }
+
+    if (auto index = token.argument(name); index != -1) {
+        return [index](LocalContext &context) -> Value & {
+            return context.args.at(index).get();
         };
     }
 
@@ -100,7 +164,7 @@ std::function<Value &(LocalContext &context)> parseIdentifier(
         };
     }
 
-    throw VBParsingError{*token.first, "could not find variable " + name};
+    throw VBParsingError{loc, "could not find variable " + name};
 }
 
 ExpressionT parseExpression(TokenPair &token) {
@@ -211,20 +275,6 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token) {
         function->call(evaluateArgumentList(argExpressionList, context),
                        context);
     };
-}
-
-Type parseAsStatement(TokenPair &token) {
-    auto loc = token.first->loc;
-    token.next();
-
-    if (!token.first) {
-        throw VBParsingError{loc, "expected typename"};
-    }
-
-    auto type = token.first->type();
-    std::cout << type << std::endl;
-    // TODO: Implement types
-    return Type{Type::Integer};
 }
 
 void parseLocalVariableDeclaration(TokenPair &token) {
@@ -345,6 +395,8 @@ std::unique_ptr<Function> parseFunction(Line *line,
 
     auto name = token.first;
 
+    token.next();
+
     auto arguments = parseArguments(token);
 
     auto body = std::make_shared<FunctionBody>();
@@ -371,8 +423,7 @@ std::unique_ptr<Function> parseFunction(Line *line,
     auto function =
         std::make_unique<Function>(name->content, std::move(arguments), f);
 
-    token.currentFunctionBody = nullptr;
-    token.namedLocalVariables.clear();
+    token.endFunction();
 
     return function;
 }
