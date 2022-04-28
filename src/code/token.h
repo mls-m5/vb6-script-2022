@@ -12,7 +12,7 @@ struct Location {
 struct Token {
 #define TOKEN_KEYWORD(x) x,
     enum Keyword {
-        NotKeyword,
+        Word,
         Empty,
         StringLiteral,
         EOFKeyword,

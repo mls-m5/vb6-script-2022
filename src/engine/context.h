@@ -27,12 +27,12 @@ struct LocalContext {
     std::vector<Value> localVariables;
     FunctionArgumentValues args;
     Value returnValue; // For functions: return value
-    const Module *module = nullptr;
+    Module *module = nullptr;
 
     LocalContext(GlobalContext &globalContext,
                  const std::vector<Type> vars = {},
                  FunctionArgumentValues = {},
-                 const Module *module = {});
+                 Module *module = {});
 
     GlobalContext &globalContext;
 };

@@ -47,7 +47,7 @@ Token::Keyword getKeyword(std::string name) {
         return f->second;
     }
 
-    return Token::NotKeyword;
+    return Token::Word;
 }
 } // namespace
 

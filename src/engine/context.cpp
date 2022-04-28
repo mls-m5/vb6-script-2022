@@ -4,7 +4,7 @@
 LocalContext::LocalContext(GlobalContext &globalContext,
                            const std::vector<Type> vars,
                            FunctionArgumentValues args,
-                           const Module *module)
+                           Module *module)
     : globalContext{globalContext}
     , module{module} {
     localVariables.reserve(vars.size());

@@ -29,6 +29,8 @@ struct TokenPair {
     Token *first = nullptr;
     Token *second = nullptr;
 
+    Module *currentModule = nullptr;
+
     FunctionBody *currentFunctionBody = nullptr;
     std::vector<std::string> namedLocalVariables;
 
@@ -50,13 +52,21 @@ struct TokenPair {
     operator bool() {
         return first;
     }
+
+    const std::string &content() const {
+        return first->content;
+    }
+
+    Token::Keyword type() const {
+        return first->type();
+    }
 };
 
 using NextLineT = std::function<Line *()>;
 using ExpressionT = std::function<Value(LocalContext &)>;
 
 void parseAssert(bool condition,
-                 const Token &location,
+                 const Location &location,
                  std::string_view message = "parsing error") {
     if (!condition) {
         throw VBParsingError{location, std::string{message}};
@@ -75,17 +85,22 @@ std::function<Value &(LocalContext &context)> parseIdentifier(
     TokenPair &token) {
     auto name = token.first->content;
 
-    auto index = token.localVariable(name);
-
-    if (index == -1) {
-        throw VBParsingError{*token.first, "could not find variable " + name};
-    }
-
     token.next();
 
-    return [index](LocalContext &context) -> Value & {
-        return context.localVariables.at(index);
-    };
+    if (auto index = token.localVariable(name); index != -1) {
+
+        return [index](LocalContext &context) -> Value & {
+            return context.localVariables.at(index);
+        };
+    }
+
+    if (auto index = token.currentModule->staticVariable(name); index != -1) {
+        return [index](LocalContext &context) -> Value & {
+            return context.module->staticVariables.at(index).second;
+        };
+    }
+
+    throw VBParsingError{*token.first, "could not find variable " + name};
 }
 
 ExpressionT parseExpression(TokenPair &token) {
@@ -106,7 +121,7 @@ ExpressionT parseExpression(TokenPair &token) {
         };
         break;
 
-    case Token::NotKeyword:
+    case Token::Word:
         expr = parseIdentifier(token);
         break;
     default:
@@ -198,6 +213,20 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token) {
     };
 }
 
+Type parseAsStatement(TokenPair &token) {
+    auto loc = token.first->loc;
+    token.next();
+
+    if (!token.first) {
+        throw VBParsingError{loc, "expected typename"};
+    }
+
+    auto type = token.first->type();
+    std::cout << type << std::endl;
+    // TODO: Implement types
+    return Type{Type::Integer};
+}
+
 void parseLocalVariableDeclaration(TokenPair &token) {
     if (!token.currentFunctionBody) {
         throw VBInternalParsingError{*token.first, "no function body"};
@@ -209,24 +238,49 @@ void parseLocalVariableDeclaration(TokenPair &token) {
 
     token.next();
 
-    if (token.first && token.first->type() == Token::As) {
-        auto loc = token.first->loc;
-
-        token.next();
-
-        if (!token.first) {
-            throw VBParsingError{loc, "expected typename"};
-        }
-
-        auto type = token.first->type();
-        std::cout << type << std::endl;
-        // TODO: Implement types
-        token.currentFunctionBody->pushLocalVariable({Type::Integer});
+    if (token && token.type() == Token::As) {
+        auto type = parseAsStatement(token);
+        token.currentFunctionBody->pushLocalVariable(type);
     }
     else {
         token.currentFunctionBody->pushLocalVariable({Type::Integer});
     }
 }
+
+void parseMemberDeclaration(TokenPair &token) {
+    auto loc = token.first->loc;
+    if (token.type() != Token::Word) {
+        token.next();
+        parseAssert(token, loc, "Expected variable name");
+    }
+
+    auto name = token.content();
+
+    token.next();
+
+    // TODO: Handle differences between class and modules where modules always
+    // have global/static variables and classes as standard have nonstatic
+    // variables
+    if (false) {
+        if (token && token.type() == Token::As) {
+            token.currentModule->variables.push_back(
+                {name, parseAsStatement(token)});
+        }
+    }
+    else {
+        if (token && token.type() == Token::As) {
+            token.currentModule->staticVariables.push_back(
+                {name, Value::create(parseAsStatement(token))});
+        }
+    }
+}
+
+void parseMemberDeclarationList(TokenPair &token) {
+    parseMemberDeclaration(token);
+
+    // TODO: Loop for all declarations
+}
+
 FunctionBody::CommandT parseAssignment(TokenPair &token) {
     auto loc = token.first->loc;
     auto target = parseIdentifier(token);
@@ -263,7 +317,7 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
 
         break;
 
-    case Token::NotKeyword: {
+    case Token::Word: {
         auto type2 = token.second ? token.second->type() : Token::Empty;
         // TODO: Handle other cases, like assignments and stuff
         if (type2 == Token::Operator) {
@@ -332,9 +386,9 @@ Module parseGlobal(Line *line, NextTokenT nextToken, NextLineT nextLine) {
         currentScope = Private;
         TokenPair token{};
         token.f = nextToken;
+        token.currentModule = &module;
         token.next();
 
-        //        auto token = nextToken();
         if (!token.first) {
             continue;
         }
@@ -352,21 +406,35 @@ Module parseGlobal(Line *line, NextTokenT nextToken, NextLineT nextLine) {
             break;
         case Token::Option:
             continue; // Skip option statements, assume Option Explicit
+        case Token::Dim:
+            parseMemberDeclaration(token);
+            continue;
         default:
             throw VBParsingError{*token.first,
-                                 "unexpected token at global scope"};
+                                 "unexpected token at global scope: " +
+                                     token.content()};
         }
 
         token.next();
-        //        token = nextToken();
 
-        if (!token.first) {
+        if (token) {
             continue;
         }
 
-        if (*token.first == "Sub") {
+        switch (token.first->type()) {
+        case Token::Sub:
             module.addFunction(
                 parseFunction(line, currentScope, token, nextLine));
+            break;
+
+        case Token::Word:
+            parseMemberDeclaration(token);
+            break;
+
+        default:
+            throw VBParsingError{*token.first,
+                                 "unexpected token at global scope " +
+                                     token.first->content};
         }
     }
 
