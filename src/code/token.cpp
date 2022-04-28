@@ -26,6 +26,10 @@ Token::Keyword getKeyword(std::string name) {
         return Token::StringLiteral;
     }
 
+    if (std::isdigit(name.front())) {
+        return Token::NumberLiteral;
+    }
+
     name = toLower(name);
 
 #define TOKEN_KEYWORD(x) {toLower(#x), Token::x},

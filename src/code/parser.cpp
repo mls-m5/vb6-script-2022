@@ -30,12 +30,12 @@ void parseAssert(bool condition,
 FunctionArguments parseArguments(NextTokenT nextToken) {
     auto args = FunctionArguments{};
 
-    // Todo: Parse arguments here
+    // TODO: Parse arguments here
 
     return args;
 }
 
-ExpressionT parseExpression(TokenPair token, NextTokenT nextToken) {
+ExpressionT parseExpression(TokenPair &token, NextTokenT nextToken) {
     auto keyword = token.first->type();
 
     ExpressionT expr;
@@ -46,20 +46,46 @@ ExpressionT parseExpression(TokenPair token, NextTokenT nextToken) {
             return Value{str};
         };
         break;
+    case Token::NumberLiteral:
+        // Todo: Handle floating point
+        expr = [i = std::stoi(token.first->content)](LocalContext &) {
+            return Value{IntegerT{i}};
+        };
+        break;
+
     default:
         throw VBParsingError{*token.first,
                              "unexpected token " + token.first->content};
     };
 
-    if (!token.second) {
+    token = nextToken();
+
+    if (!token.first) {
         return expr;
     }
 
-    // Todo: Handle for exemple binary expressions
-    switch (token.second->type()) {
+    // TODO: Handle for exemple binary expressions
+    switch (token.first->type()) {
     default:
         return expr;
     }
+}
+
+std::vector<ExpressionT> parseList(TokenPair &token, NextTokenT nextToken) {
+    auto list = std::vector<ExpressionT>{};
+
+    list.push_back(parseExpression(token, nextToken));
+
+    while (token.first && token.first->content == ",") {
+        auto loc = token.first->loc;
+        token = nextToken();
+        if (!token.first) {
+            throw VBParsingError{loc, "expected expression"};
+        }
+        list.push_back(parseExpression(token, nextToken));
+    }
+
+    return list;
 }
 
 Function *lookupFunction(std::string_view name, LocalContext &context) {
@@ -76,11 +102,28 @@ Function *lookupFunction(std::string_view name, LocalContext &context) {
         "trying to lookup function on context without active module"};
 };
 
+FunctionArgumentValues evaluateArgumentList(
+    const std::vector<ExpressionT> &args, LocalContext &context) {
+    auto values = FunctionArgumentValues{};
+    values.reserve(args.size());
+
+    for (auto &arg : args) {
+        // TODO: Handle references
+        values.push_back(FunctionArgumentValue{arg(context)});
+    }
+
+    return values;
+}
+
 FunctionBody::CommandT parseMethodCall(TokenPair token, NextTokenT nextToken) {
-    // Todo: Actually implement this
     auto methodName = token.first->content;
 
-    return [methodName, function = static_cast<Function *>(nullptr)](
+    token = nextToken();
+    auto argExpressionList = parseList(token, nextToken);
+
+    return [methodName,
+            argExpressionList,
+            function = static_cast<Function *>(nullptr)](
                LocalContext &context) mutable {
         if (!function) {
             function = lookupFunction(methodName, context);
@@ -90,8 +133,8 @@ FunctionBody::CommandT parseMethodCall(TokenPair token, NextTokenT nextToken) {
             VBRuntimeError{"could not find function " + methodName};
         }
 
-        // Todo: Provide parsed args
-        function->call({}, context);
+        function->call(evaluateArgumentList(argExpressionList, context),
+                       context);
     };
 }
 
@@ -110,7 +153,7 @@ FunctionBody::CommandT parseCommand(TokenPair token, NextTokenT nextToken) {
     } break;
 
     case Token::NotKeyword:
-        // Todo: Handle other cases, like assignments and stuff
+        // TODO: Handle other cases, like assignments and stuff
         return parseMethodCall(token, nextToken);
     default:
 
