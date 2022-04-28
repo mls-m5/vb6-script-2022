@@ -18,12 +18,37 @@ enum Scope {
 
 using NextTokenT = std::function<std::pair<Token *, Token *>()>;
 
-struct TokenPair : std::pair<Token *, Token *> {
+// Contains the current state of the parser
+struct TokenPair {
+    TokenPair() = default;
+    TokenPair(const TokenPair &) = delete;
+    TokenPair &operator=(const TokenPair &) = delete;
+
     NextTokenT f;
 
-    TokenPair next() {
+    Token *first = nullptr;
+    Token *second = nullptr;
+
+    FunctionBody *currentFunctionBody = nullptr;
+    std::vector<std::string> namedLocalVariables;
+
+    int localVariable(std::string_view name) {
+        for (size_t i = 0; i < namedLocalVariables.size(); ++i) {
+            if (namedLocalVariables.at(i) == name) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    TokenPair &next() {
         std::tie(first, second) = f();
         return *this;
+    }
+
+    operator bool() {
+        return first;
     }
 };
 
@@ -46,6 +71,23 @@ FunctionArguments parseArguments(TokenPair &token) {
     return args;
 }
 
+std::function<Value &(LocalContext &context)> parseIdentifier(
+    TokenPair &token) {
+    auto name = token.first->content;
+
+    auto index = token.localVariable(name);
+
+    if (index == -1) {
+        throw VBParsingError{*token.first, "could not find variable " + name};
+    }
+
+    token.next();
+
+    return [index](LocalContext &context) -> Value & {
+        return context.localVariables.at(index);
+    };
+}
+
 ExpressionT parseExpression(TokenPair &token) {
     auto keyword = token.first->type();
 
@@ -64,10 +106,17 @@ ExpressionT parseExpression(TokenPair &token) {
         };
         break;
 
+    case Token::NotKeyword:
+        expr = parseIdentifier(token);
+        break;
     default:
         throw VBParsingError{*token.first,
                              "unexpected token " + token.first->content};
     };
+
+    if (!expr) {
+        throw VBParsingError{*token.first, "failied to parse expression"};
+    }
 
     token.next();
 
@@ -126,7 +175,7 @@ FunctionArgumentValues evaluateArgumentList(
     return values;
 }
 
-FunctionBody::CommandT parseMethodCall(TokenPair token) {
+FunctionBody::CommandT parseMethodCall(TokenPair &token) {
     auto methodName = token.first->content;
 
     token.next();
@@ -149,9 +198,54 @@ FunctionBody::CommandT parseMethodCall(TokenPair token) {
     };
 }
 
+void parseLocalVariableDeclaration(TokenPair &token) {
+    if (!token.currentFunctionBody) {
+        throw VBInternalParsingError{*token.first, "no function body"};
+    }
+
+    auto name = token.first->content;
+
+    token.namedLocalVariables.push_back(name);
+
+    token.next();
+
+    if (token.first && token.first->type() == Token::As) {
+        auto loc = token.first->loc;
+
+        token.next();
+
+        if (!token.first) {
+            throw VBParsingError{loc, "expected typename"};
+        }
+
+        auto type = token.first->type();
+        std::cout << type << std::endl;
+        // TODO: Implement types
+        token.currentFunctionBody->pushLocalVariable({Type::Integer});
+    }
+    else {
+        token.currentFunctionBody->pushLocalVariable({Type::Integer});
+    }
+}
+FunctionBody::CommandT parseAssignment(TokenPair &token) {
+    auto loc = token.first->loc;
+    auto target = parseIdentifier(token);
+    token.next();
+
+    if (!token) {
+        throw VBParsingError{loc, "Expected expression to assign to"};
+    }
+
+    auto expr = parseExpression(token);
+
+    return [target, expr](LocalContext &context) {
+        target(context) = expr(context);
+    };
+}
+
 //! A command is a line inside a function that starts at the beginning of the
 //! line
-FunctionBody::CommandT parseCommand(TokenPair token) {
+FunctionBody::CommandT parseCommand(TokenPair &token) {
     switch (token.first->type()) {
     case Token::Print: {
         parseAssert(token.second, *token.first, "expected expression");
@@ -163,12 +257,26 @@ FunctionBody::CommandT parseCommand(TokenPair token) {
         };
     } break;
 
-    case Token::NotKeyword:
+    case Token::Dim:
+        token.next();
+        parseLocalVariableDeclaration(token);
+
+        break;
+
+    case Token::NotKeyword: {
+        auto type2 = token.second ? token.second->type() : Token::Empty;
         // TODO: Handle other cases, like assignments and stuff
-        return parseMethodCall(token);
+        if (type2 == Token::Operator) {
+            return parseAssignment(token);
+        }
+        else {
+            return parseMethodCall(token);
+        }
+    }
     default:
 
-        throw VBParsingError{*token.first, "unexpected command"};
+        throw VBParsingError{*token.first,
+                             "unexpected command " + token.first->content};
     }
 
     return {};
@@ -186,6 +294,8 @@ std::unique_ptr<Function> parseFunction(Line *line,
     auto arguments = parseArguments(token);
 
     auto body = std::make_shared<FunctionBody>();
+
+    token.currentFunctionBody = body.get();
 
     for (line = nextLine(); line; line = nextLine()) {
         token.next();
@@ -206,6 +316,9 @@ std::unique_ptr<Function> parseFunction(Line *line,
 
     auto function =
         std::make_unique<Function>(name->content, std::move(arguments), f);
+
+    token.currentFunctionBody = nullptr;
+    token.namedLocalVariables.clear();
 
     return function;
 }

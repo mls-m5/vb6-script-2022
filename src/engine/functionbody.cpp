@@ -1,6 +1,10 @@
 #include "functionbody.h"
 #include "classinstance.h"
 
+void FunctionBody::pushLocalVariable(Type t) {
+    localVariables.push_back(t);
+}
+
 void FunctionBody::pushCommand(const CommandT &command) {
     if (!command) {
         return;

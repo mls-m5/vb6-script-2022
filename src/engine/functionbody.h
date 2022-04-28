@@ -9,12 +9,13 @@ public:
 
 private:
     std::vector<Type> localVariables;
-
     std::vector<CommandT> commands;
 
     Value returnValue;
 
 public:
+    void pushLocalVariable(Type t);
+
     void pushCommand(const CommandT &t);
 
     Value call(const FunctionArgumentValues &values,

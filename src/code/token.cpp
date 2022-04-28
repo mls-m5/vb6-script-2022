@@ -1,5 +1,6 @@
 #include "token.h"
 #include <algorithm>
+#include <array>
 #include <unordered_map>
 
 namespace {
@@ -17,6 +18,7 @@ bool iCompare(std::string_view lowerString, std::string ordinary) {
 }
 
 Token::Keyword getKeyword(std::string name) {
+    constexpr static auto operators = std::string_view{"=*"};
 
     if (name.empty()) {
         return Token::Empty;
@@ -24,6 +26,10 @@ Token::Keyword getKeyword(std::string name) {
 
     if (name.front() == '"') {
         return Token::StringLiteral;
+    }
+
+    if (operators.find(name.front()) != std::string::npos) {
+        return Token::Operator;
     }
 
     if (std::isdigit(name.front())) {
