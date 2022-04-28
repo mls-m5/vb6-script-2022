@@ -34,9 +34,9 @@ TEST_CASE("keywords") {
 
     auto &line = f.lines.front();
     EXPECT_EQ(line.size(), 3);
-    EXPECT_EQ(line.at(0).keyword(), Token::Private);
-    EXPECT_EQ(line.at(1).keyword(), Token::Sub);
-    EXPECT_EQ(line.at(2).keyword(), Token::Function);
+    EXPECT_EQ(line.at(0).type(), Token::Private);
+    EXPECT_EQ(line.at(1).type(), Token::Sub);
+    EXPECT_EQ(line.at(2).type(), Token::Function);
 }
 
 TEST_CASE("broken line") {

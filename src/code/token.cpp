@@ -54,6 +54,6 @@ bool Token::operator==(std::string_view str) {
     return true;
 }
 
-Token::Keyword Token::keyword() const {
+Token::Keyword Token::type() const {
     return getKeyword(content);
 }

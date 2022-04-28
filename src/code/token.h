@@ -20,7 +20,7 @@ struct Token {
     size_t line;
 
     // Check if token is keyword
-    Keyword keyword() const;
+    Keyword type() const;
 
     // Do not case sensitive
     bool operator==(std::string_view str);

@@ -35,11 +35,11 @@ FunctionArguments parseArguments(NextTokenT nextToken) {
 }
 
 ExpressionT parseExpression(Token &token, NextTokenT nextToken) {
-    auto keyword = token.keyword();
+    auto keyword = token.type();
 
     switch (keyword) {
     case Token::StringLiteral:
-        return [str = token.content](LocalContext &) -> Value { return {str}; };
+        return [str = token.content](LocalContext &) { return Value{str}; };
     default:
         throw VBParsingError{token, "unexpected token " + token.content};
     };
@@ -47,7 +47,7 @@ ExpressionT parseExpression(Token &token, NextTokenT nextToken) {
 
 FunctionBody::CommandT parseCommand(Token *token, NextTokenT nextToken) {
     auto next = nextToken();
-    switch (token->keyword()) {
+    switch (token->type()) {
     case Token::Print: {
         parseAssert(next.first, *token, "expected expression");
         auto expr = parseExpression(*next.first, nextToken);
@@ -82,7 +82,7 @@ std::unique_ptr<Function> parseFunction(Line *line,
         if (!token.first) {
             continue;
         }
-        auto keyWord = token.first->keyword();
+        auto keyWord = token.first->type();
         if (keyWord == Token::End) {
             break;
         }
@@ -112,7 +112,7 @@ Module parseGlobal(Line *line, NextTokenT nextToken, NextLineT nextLine) {
             continue;
         }
 
-        switch (token.first->keyword()) {
+        switch (token.first->type()) {
         case Token::Public:
             currentScope = Public;
             break;
