@@ -222,6 +222,10 @@ ExpressionT parseExpression(TokenPair &token) {
 std::vector<ExpressionT> parseList(TokenPair &token) {
     auto list = std::vector<ExpressionT>{};
 
+    if (!token.first) {
+        return {};
+    }
+
     list.push_back(parseExpression(token));
 
     while (token.content() == ",") {
