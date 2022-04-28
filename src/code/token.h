@@ -3,17 +3,11 @@
 #include <string>
 #include <vector>
 
-#define TOKEN_KEYWORDS                                                         \
-    TOKEN_KEYWORD(Sub)                                                         \
-    TOKEN_KEYWORD(Function)                                                    \
-    TOKEN_KEYWORD(End)                                                         \
-    TOKEN_KEYWORD(If)                                                          \
-    TOKEN_KEYWORD(Elif)                                                        \
-    TOKEN_KEYWORD(Private)
+#include "keywordlist.h"
 
 struct Token {
 #define TOKEN_KEYWORD(x) x,
-    enum Keyword { NotKeyword, TOKEN_KEYWORDS };
+    enum Keyword { NotKeyword, EOFKeyword, TOKEN_KEYWORD_LIST };
 #undef TOKEN_KEYWORD
 
     std::string content;

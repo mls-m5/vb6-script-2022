@@ -21,8 +21,8 @@ Token::Keyword getKeyword(std::string name) {
 
 #define TOKEN_KEYWORD(x) {toLower(#x), Token::x},
 
-    static const auto map =
-        std::unordered_map<std::string, Token::Keyword>{TOKEN_KEYWORDS};
+    static const auto map = std::unordered_map<std::string, Token::Keyword>{
+        {"EOF", Token::EOFKeyword}, TOKEN_KEYWORD_LIST};
 
     if (auto f = map.find(name); f != map.end()) {
         return f->second;
