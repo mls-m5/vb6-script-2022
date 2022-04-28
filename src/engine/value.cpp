@@ -39,4 +39,6 @@ std::string Value::toString() const {
     case Type::Struct:
         throw VBRuntimeError{"could not convert struct to string"};
     }
+
+    return {};
 }

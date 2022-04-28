@@ -14,8 +14,17 @@ enum Scope {
     None,
 };
 
-using TokenPair = std::pair<Token *, Token *>;
-using NextTokenT = std::function<TokenPair()>;
+using NextTokenT = std::function<std::pair<Token *, Token *>()>;
+
+struct TokenPair : std::pair<Token *, Token *> {
+    NextTokenT f;
+
+    TokenPair next() {
+        std::tie(first, second) = f();
+        return *this;
+    }
+};
+
 using NextLineT = std::function<Line *()>;
 using ExpressionT = std::function<Value(LocalContext &)>;
 
@@ -27,7 +36,7 @@ void parseAssert(bool condition,
     }
 }
 
-FunctionArguments parseArguments(NextTokenT nextToken) {
+FunctionArguments parseArguments(TokenPair &token) {
     auto args = FunctionArguments{};
 
     // TODO: Parse arguments here
@@ -35,7 +44,7 @@ FunctionArguments parseArguments(NextTokenT nextToken) {
     return args;
 }
 
-ExpressionT parseExpression(TokenPair &token, NextTokenT nextToken) {
+ExpressionT parseExpression(TokenPair &token) {
     auto keyword = token.first->type();
 
     ExpressionT expr;
@@ -58,7 +67,7 @@ ExpressionT parseExpression(TokenPair &token, NextTokenT nextToken) {
                              "unexpected token " + token.first->content};
     };
 
-    token = nextToken();
+    token.next();
 
     if (!token.first) {
         return expr;
@@ -71,18 +80,18 @@ ExpressionT parseExpression(TokenPair &token, NextTokenT nextToken) {
     }
 }
 
-std::vector<ExpressionT> parseList(TokenPair &token, NextTokenT nextToken) {
+std::vector<ExpressionT> parseList(TokenPair &token) {
     auto list = std::vector<ExpressionT>{};
 
-    list.push_back(parseExpression(token, nextToken));
+    list.push_back(parseExpression(token));
 
     while (token.first && token.first->content == ",") {
         auto loc = token.first->loc;
-        token = nextToken();
+        token.next();
         if (!token.first) {
             throw VBParsingError{loc, "expected expression"};
         }
-        list.push_back(parseExpression(token, nextToken));
+        list.push_back(parseExpression(token));
     }
 
     return list;
@@ -115,11 +124,11 @@ FunctionArgumentValues evaluateArgumentList(
     return values;
 }
 
-FunctionBody::CommandT parseMethodCall(TokenPair token, NextTokenT nextToken) {
+FunctionBody::CommandT parseMethodCall(TokenPair token) {
     auto methodName = token.first->content;
 
-    token = nextToken();
-    auto argExpressionList = parseList(token, nextToken);
+    token.next();
+    auto argExpressionList = parseList(token);
 
     return [methodName,
             argExpressionList,
@@ -140,12 +149,12 @@ FunctionBody::CommandT parseMethodCall(TokenPair token, NextTokenT nextToken) {
 
 //! A command is a line inside a function that starts at the beginning of the
 //! line
-FunctionBody::CommandT parseCommand(TokenPair token, NextTokenT nextToken) {
+FunctionBody::CommandT parseCommand(TokenPair token) {
     switch (token.first->type()) {
     case Token::Print: {
         parseAssert(token.second, *token.first, "expected expression");
-        auto next = nextToken();
-        auto expr = parseExpression(next, nextToken);
+        token.next();
+        auto expr = parseExpression(token);
 
         return [expr](LocalContext &context) {
             std::cout << expr(context).toString() << std::endl; //
@@ -154,7 +163,7 @@ FunctionBody::CommandT parseCommand(TokenPair token, NextTokenT nextToken) {
 
     case Token::NotKeyword:
         // TODO: Handle other cases, like assignments and stuff
-        return parseMethodCall(token, nextToken);
+        return parseMethodCall(token);
     default:
 
         throw VBParsingError{*token.first, "unexpected command"};
@@ -165,19 +174,20 @@ FunctionBody::CommandT parseCommand(TokenPair token, NextTokenT nextToken) {
 
 std::unique_ptr<Function> parseFunction(Line *line,
                                         Scope scope,
-                                        NextTokenT nextToken,
+                                        TokenPair &token,
                                         NextLineT nextLine) {
 
-    auto token = nextToken();
+    token.next();
+    //    auto token = nextToken();
 
     auto name = token.first;
 
-    auto arguments = parseArguments(nextToken);
+    auto arguments = parseArguments(token);
 
     auto body = std::make_shared<FunctionBody>();
 
     for (line = nextLine(); line; line = nextLine()) {
-        token = nextToken();
+        token.next();
         if (!token.first) {
             continue;
         }
@@ -185,7 +195,7 @@ std::unique_ptr<Function> parseFunction(Line *line,
         if (keyWord == Token::End) {
             break;
         }
-        body->pushCommand(parseCommand(token, nextToken));
+        body->pushCommand(parseCommand(token));
     }
 
     Function::FuncT f = [body](const FunctionArgumentValues &args,
@@ -206,7 +216,11 @@ Module parseGlobal(Line *line, NextTokenT nextToken, NextLineT nextLine) {
 
     for (; line; line = nextLine()) {
         currentScope = Private;
-        auto token = nextToken();
+        TokenPair token{};
+        token.f = nextToken;
+        token.next();
+
+        //        auto token = nextToken();
         if (!token.first) {
             continue;
         }
@@ -219,8 +233,7 @@ Module parseGlobal(Line *line, NextTokenT nextToken, NextLineT nextLine) {
             currentScope = Private;
             break;
         case Token::Sub:
-            module.addFunction(
-                parseFunction(line, Private, nextToken, nextLine));
+            module.addFunction(parseFunction(line, Private, token, nextLine));
             continue;
             break;
         case Token::Option:
@@ -230,7 +243,8 @@ Module parseGlobal(Line *line, NextTokenT nextToken, NextLineT nextLine) {
                                  "unexpected token at global scope"};
         }
 
-        token = nextToken();
+        token.next();
+        //        token = nextToken();
 
         if (!token.first) {
             continue;
@@ -238,7 +252,7 @@ Module parseGlobal(Line *line, NextTokenT nextToken, NextLineT nextLine) {
 
         if (*token.first == "Sub") {
             module.addFunction(
-                parseFunction(line, currentScope, nextToken, nextLine));
+                parseFunction(line, currentScope, token, nextLine));
         }
     }
 
