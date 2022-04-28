@@ -11,6 +11,11 @@ class FunctionBody {
 
     std::vector<CommandType> commands;
 
-    void call(const FunctionArgumentValues &values,
-              LocalContext &context) const;
+    Value returnValue;
+
+public:
+    void pushCommand(const CommandType &t);
+
+    Value call(const FunctionArgumentValues &values,
+               LocalContext &context) const;
 };

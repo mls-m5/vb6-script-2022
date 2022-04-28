@@ -10,6 +10,7 @@ add_library(
     src/engine/value.cpp
     src/engine/context.cpp
     src/engine/functionbody.cpp
+    src/engine/type.cpp
     src/code/lexer.cpp
     src/code/parser.cpp
     src/code/token.cpp

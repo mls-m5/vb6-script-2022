@@ -22,15 +22,19 @@ public:
                                       LocalContext &context)>;
 
 private:
-    std::string name;
-    FunctionArguments arguments;
-    FuncT f;
+    std::string _name;
+    FunctionArguments _arguments;
+    FuncT _f;
 
 public:
     Function(std::string name, FunctionArguments args, FuncT f)
-        : name{std::move(name)}
-        , arguments{std::move(args)}
-        , f{f} {}
+        : _name{std::move(name)}
+        , _arguments{std::move(args)}
+        , _f{f} {}
 
     Value call(const FunctionArgumentValues &args, LocalContext &context);
+
+    std::string_view name() {
+        return _name;
+    }
 };

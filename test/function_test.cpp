@@ -1,4 +1,5 @@
 #include "function.h"
+#include "functionbody.h"
 #include "mls-unit-test/unittest.h"
 
 TEST_SUIT_BEGIN
@@ -37,6 +38,22 @@ TEST_CASE("basic function call") {
     ASSERT_EQ(a, 10);
     ASSERT_EQ(b, 20);
     ASSERT_EQ(c, 30);
+}
+
+TEST_CASE("basic function body") {
+    auto body = FunctionBody{};
+
+    body.pushCommand([](LocalContext &context) {
+        context.returnValue = IntegerT{20}; //
+    });
+
+    auto globalContext = GlobalContext{};
+    auto dummyContext = LocalContext{globalContext};
+
+    auto ret = body.call({}, dummyContext);
+
+    ASSERT_EQ(ret.type(), Type::Integer);
+    ASSERT_EQ(ret.get<IntegerT>(), 20);
 }
 
 TEST_SUIT_END

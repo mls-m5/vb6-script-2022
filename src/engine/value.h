@@ -48,5 +48,10 @@ struct Value {
         return static_cast<Type::TypeName>(value.index());
     }
 
+    // Set value and change type at the same time
+    //    void setAny(const Value &other) {
+    //        value = other.value;
+    //    }
+
     // Implement operator =()
 };

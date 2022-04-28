@@ -24,6 +24,7 @@ struct GlobalContext {
 struct LocalContext {
     std::vector<Value> localVariables;
     FunctionArgumentValues args;
+    Value returnValue; // For functions: return value
 
     LocalContext(GlobalContext &globalContext,
                  const std::vector<Type> vars = {},

@@ -9,4 +9,14 @@ struct Module {
     void addFunction(std::shared_ptr<Function> function) {
         functions.push_back(std::move(function));
     }
+
+    Function &function(std::string_view name) {
+        for (auto &f : functions) {
+            if (f->name() == name) {
+                return *f;
+            }
+        }
+
+        throw VBRuntimeError{"no function called " + std::string{name}};
+    }
 };

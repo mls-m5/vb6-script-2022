@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "engine/function.h"
+#include "functionbody.h"
 #include "lexer.h"
 #include "vbparsingerror.h"
 #include <functional>
@@ -32,12 +33,22 @@ std::unique_ptr<Function> parseFunction(Line *line,
 
     auto name = token.first;
 
-    auto f = [](const FunctionArgumentValues &, LocalContext &context) {
-        return Value{};
+    auto arguments = parseArguments(nextToken);
+
+    auto body = std::make_shared<FunctionBody>();
+
+    for (line = nextLine(); line; line = nextLine()) {
+        // Todo: Continune here with functionbody
+        body->pushCommand([](LocalContext &context) {});
+    }
+
+    Function::FuncT f = [body](const FunctionArgumentValues &args,
+                               LocalContext &context) -> Value {
+        return body->call(args, context);
     };
 
     auto function =
-        std::make_unique<Function>(name->content, parseArguments(nextToken), f);
+        std::make_unique<Function>(name->content, std::move(arguments), f);
 
     return function;
 }
@@ -90,28 +101,34 @@ Module parse(std::istream &stream, std::filesystem::path path) {
 
     auto f = CodeFile{stream, path};
 
+    size_t lineNum = 0;
     size_t tokenNum = 0;
 
-    auto nextLine = [i = size_t{0}, &f, &tokenNum]() mutable -> Line * {
+    Line *line = nullptr;
+
+    auto nextLine = [&lineNum, &f, &tokenNum, &line]() -> Line * {
         tokenNum = 0;
+        auto i = lineNum;
+        ++lineNum;
         if (i < f.lines.size()) {
-            return &f.lines.at(i++);
+            return (line = &f.lines.at(i));
         }
         else {
-            ++i;
             return {};
         }
     };
 
-    auto line = nextLine();
+    nextLine();
 
     auto nextToken = [&tokenNum, &line]() -> std::pair<Token *, Token *> {
+        auto i = tokenNum;
         auto i2 = tokenNum + 1;
+        ++tokenNum;
         if (!line) {
             return {};
         }
         return {
-            (tokenNum < line->size()) ? &line->at(tokenNum) : nullptr,
+            (i < line->size()) ? &line->at(i) : nullptr,
             (i2 < line->size()) ? &line->at(i2) : nullptr,
         };
     };
