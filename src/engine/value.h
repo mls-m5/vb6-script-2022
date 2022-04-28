@@ -4,9 +4,12 @@
 #include <string>
 
 struct Value {
-    std::
-        variant<std::string, SingleT, DoubleT, IntegerT, LongT, ClassT, StructT>
-            value;
+    //    std::
+    //        variant<std::string, SingleT, DoubleT, IntegerT, LongT, ClassT,
+    //        StructT>
+    //            value;
+
+    TypeVariantT value;
 
     Value() = default;
     Value(Value &&) = default;

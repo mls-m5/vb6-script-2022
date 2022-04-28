@@ -6,10 +6,16 @@ End Structure
 
 Sub Main()
 	Dim A as Apa
+	Dim B as Apa
 
 	A.X = 20
 	A.Y = 30
 
-	Assert A.X
-	Assert A.Y
+	B = A
+
+	B.X = A.X
+
+	Assert 10
+	'Assert A.X
+	'Assert A.Y
 End Sub

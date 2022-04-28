@@ -56,4 +56,15 @@ TEST_CASE("basic function body") {
     ASSERT_EQ(ret.get<IntegerT>(), 20);
 }
 
+TEST_CASE("Value or ref") {
+    // Problematic expressions
+    auto value = Value{IntegerT{10}};
+
+    std::cout << value.toString() << std::endl;
+
+    auto vor = ValueOrRef{value};
+
+    std::cout << vor.get().toString() << std::endl;
+}
+
 TEST_SUIT_END

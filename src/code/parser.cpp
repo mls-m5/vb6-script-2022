@@ -155,8 +155,6 @@ FunctionArguments parseArguments(TokenPair &token) {
         }
     }
 
-    // TODO: Parse the whole list separated by ','
-
     return args;
 }
 
@@ -167,6 +165,7 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token,
 
     if (type.type == Type::Struct) {
         auto memberIndex = type.classType->getVariableIndex(token.content());
+        token.next();
         return [base, memberIndex](LocalContext &context) -> Value & {
             auto &baseVar = base(context);
             auto &s = baseVar.get<StructT>();
@@ -311,7 +310,17 @@ FunctionArgumentValues evaluateArgumentList(
 
     for (auto &arg : args) {
         // TODO: Handle references
-        values.push_back(ValueOrRef{arg(context)});
+        auto vor = ValueOrRef{arg(context)};
+
+        //        if (values.size() > 0) {
+        // TODO: Remove this
+        // TODO: Something is not working here
+        //            auto &value = values.at(0).get();
+        auto &value = vor.get();
+        std::cout << value.toString() << std::endl;
+        //        }
+
+        values.push_back(vor);
     }
 
     return values;
@@ -335,8 +344,9 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token) {
             VBRuntimeError{"could not find function " + methodName};
         }
 
-        function->call(evaluateArgumentList(argExpressionList, context),
-                       context);
+        auto args = evaluateArgumentList(argExpressionList, context);
+
+        function->call(args, context);
     };
 }
 
@@ -394,9 +404,9 @@ void parseMemberDeclarationList(TokenPair &token) {
     // TODO: Loop for all declarations
 }
 
-FunctionBody::CommandT parseAssignment(TokenPair &token) {
+FunctionBody::CommandT parseAssignment(TokenPair &token,
+                                       IdentifierFuncT target) {
     auto loc = token.first->loc;
-    auto target = parseIdentifier(token);
     token.next();
 
     if (!token) {
@@ -407,7 +417,7 @@ FunctionBody::CommandT parseAssignment(TokenPair &token) {
 
     return [target, expr](LocalContext &context) {
         target(context) = expr(context).get();
-        std::cout << target(context).toString() << std::endl;
+        //        std::cout << target(context).toString() << std::endl;
     };
 }
 
@@ -433,12 +443,11 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
 
     case Token::Word: {
         auto type2 = token.second ? token.second->type() : Token::Empty;
-        // TODO: Handle other cases, like assignments and stuff
-        if (type2 == Token::Operator) {
-            return parseAssignment(token);
-        }
-        else if (token.second && token.second->content == ".") {
-            return parseIdentifier(token);
+        if (type2 == Token::Operator ||
+            (token.second && token.second->content == ".")) {
+            // TODO: Fix this
+            auto identifier = parseIdentifier(token);
+            return parseAssignment(token, identifier);
         }
         else {
             return parseMethodCall(token);
