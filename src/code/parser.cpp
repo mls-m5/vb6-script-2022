@@ -178,7 +178,6 @@ std::unique_ptr<Function> parseFunction(Line *line,
                                         NextLineT nextLine) {
 
     token.next();
-    //    auto token = nextToken();
 
     auto name = token.first;
 

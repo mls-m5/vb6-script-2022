@@ -30,7 +30,10 @@ function(test testname)
         )
 endfunction()
 
+file(COPY scripts DESTINATION .)
+
 test(class)
 test(function)
 test(lexer)
 test(parser)
+test(script)
