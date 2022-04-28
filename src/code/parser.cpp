@@ -104,6 +104,8 @@ Type parseAsStatement(TokenPair &token) {
     }
 
     auto type = token.first->type();
+
+    token.next();
     //    std::cout << type << std::endl;
     // TODO: Implement types
     return Type{Type::Integer};
@@ -121,18 +123,25 @@ FunctionArguments parseArguments(TokenPair &token) {
 
     token.next();
 
-    if (token.content() == ")") {
-        return args;
+    for (bool shouldContinue = true; shouldContinue;) {
+        if (token.content() == ")") {
+            return args;
+        }
+
+        auto name = token.content();
+        token.next();
+
+        auto type = (token.type() == Token::As) ? parseAsStatement(token)
+                                                : Type{Type::Integer};
+
+        args.push_back({type, name});
+        token.namedArguments.push_back(name);
+
+        if (token.content() == ",") {
+            shouldContinue = true;
+            token.next();
+        }
     }
-
-    auto name = token.content();
-    token.next();
-
-    auto type = (token.type() == Token::As) ? parseAsStatement(token)
-                                            : Type{Type::Integer};
-
-    args.push_back({type, name});
-    token.namedArguments.push_back(name);
 
     // TODO: Parse the whole list separated by ','
 
@@ -215,7 +224,7 @@ std::vector<ExpressionT> parseList(TokenPair &token) {
 
     list.push_back(parseExpression(token));
 
-    while (token.first && token.first->content == ",") {
+    while (token.content() == ",") {
         auto loc = token.first->loc;
         token.next();
         if (!token.first) {

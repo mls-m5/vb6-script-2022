@@ -20,7 +20,8 @@ auto inner =
     }};
 
 for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
-    unittest::testMap[it.path()] = [path = it.path(), inner]() -> void {
+    unittest::testMap[it.path().string()] = [path = it.path(),
+                                             inner]() -> void {
         std::cout << path << std::endl;
 
         auto module = loadModule(path);
