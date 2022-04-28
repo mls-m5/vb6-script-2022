@@ -62,21 +62,46 @@ ExpressionT parseExpression(TokenPair token, NextTokenT nextToken) {
     }
 }
 
-FunctionBody::CommandT parseMethodCall(TokenPair, NextTokenT nextToken) {
+Function *lookupFunction(std::string_view name, LocalContext &context) {
+    if (context.module) {
+        if (auto f = context.module->function(name)) {
+            return f;
+        }
+
+        throw VBRuntimeError{"function " + std::string{name} +
+                             " does not exist"};
+    }
+
+    throw VBRuntimeError{
+        "trying to lookup function on context without active module"};
+};
+
+FunctionBody::CommandT parseMethodCall(TokenPair token, NextTokenT nextToken) {
     // Todo: Actually implement this
-    return [](LocalContext &context) {
-        std::cout << "method call" << std::endl; //
-        context.globalContext.set("test", Value{IntegerT{10}});
+    auto methodName = token.first->content;
+
+    return [methodName, function = static_cast<Function *>(nullptr)](
+               LocalContext &context) mutable {
+        if (!function) {
+            function = lookupFunction(methodName, context);
+        }
+
+        if (!function) {
+            VBRuntimeError{"could not find function " + methodName};
+        }
+
+        // Todo: Provide parsed args
+        function->call({}, context);
     };
 }
 
 //! A command is a line inside a function that starts at the beginning of the
 //! line
 FunctionBody::CommandT parseCommand(TokenPair token, NextTokenT nextToken) {
-    auto next = nextToken();
     switch (token.first->type()) {
     case Token::Print: {
         parseAssert(token.second, *token.first, "expected expression");
+        auto next = nextToken();
         auto expr = parseExpression(next, nextToken);
 
         return [expr](LocalContext &context) {
@@ -86,7 +111,7 @@ FunctionBody::CommandT parseCommand(TokenPair token, NextTokenT nextToken) {
 
     case Token::NotKeyword:
         // Todo: Handle other cases, like assignments and stuff
-        return parseMethodCall(next, nextToken);
+        return parseMethodCall(token, nextToken);
     default:
 
         throw VBParsingError{*token.first, "unexpected command"};

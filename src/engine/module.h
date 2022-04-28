@@ -10,13 +10,13 @@ struct Module {
         functions.push_back(std::move(function));
     }
 
-    Function &function(std::string_view name) {
+    Function *function(std::string_view name) const {
         for (auto &f : functions) {
             if (f->name() == name) {
-                return *f;
+                return f.get();
             }
         }
 
-        throw VBRuntimeError{"no function called " + std::string{name}};
+        return nullptr;
     }
 };

@@ -21,14 +21,18 @@ struct GlobalContext {
     }
 };
 
+struct Module;
+
 struct LocalContext {
     std::vector<Value> localVariables;
     FunctionArgumentValues args;
     Value returnValue; // For functions: return value
+    const Module *module = nullptr;
 
     LocalContext(GlobalContext &globalContext,
                  const std::vector<Type> vars = {},
-                 FunctionArgumentValues = {});
+                 FunctionArgumentValues = {},
+                 const Module *module = {});
 
     GlobalContext &globalContext;
 };

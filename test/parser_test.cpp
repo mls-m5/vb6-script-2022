@@ -15,11 +15,13 @@ End Sub
 
     auto module = parse(ss, "");
 
-    auto context = TestContext{};
+    auto context = TestContext{&module};
 
-    auto &f = module.function("Main");
+    auto f = module.function("Main");
 
-    f.call(context.args, context.local);
+    EXPECT(f);
+
+    f->call(context.args, context.local);
 }
 
 TEST_CASE("ignore option statements") {
@@ -45,10 +47,24 @@ End Sub
 
     auto module = parse(ss, "");
 
-    auto context = TestContext{};
+    auto context = TestContext{&module};
 
-    auto inner = Function::FuncT{[](const FunctionArgumentValues &args,
-                                    LocalContext &) { return Value{}; }};
+    bool isCalled = false;
+    int numArgs = 0;
+    int arg1Res = -1;
+    int arg2Res = -1;
+
+    auto inner = Function::FuncT{
+        [&](const FunctionArgumentValues &args, LocalContext &) {
+            isCalled = true;
+            numArgs = args.size();
+            if (numArgs != 2) {
+                return Value{};
+            }
+            arg1Res = args.at(0).get().get<IntegerT>();
+            arg2Res = args.at(1).get().get<IntegerT>();
+            return Value{};
+        }};
 
     module.addFunction(std::make_unique<Function>(
         "TestSet",
@@ -58,10 +74,15 @@ End Sub
         }},
         inner));
 
-    auto &f = module.function("Main");
+    auto f = module.function("Main");
 
-    f.call(context.args, context.local);
+    EXPECT(f);
 
-    ASSERT_EQ(context.global.get("test").get<IntegerT>(), 10);
+    f->call(context.args, context.local);
+
+    ASSERT_EQ(isCalled, true);
+    ASSERT_EQ(numArgs, 2);
+    ASSERT_EQ(arg1Res, 10);
+    ASSERT_EQ(arg2Res, 20);
 }
 TEST_SUIT_END

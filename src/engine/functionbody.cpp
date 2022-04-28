@@ -10,7 +10,8 @@ void FunctionBody::pushCommand(const CommandT &command) {
 
 Value FunctionBody::call(const FunctionArgumentValues &args,
                          LocalContext &context) const {
-    auto local = LocalContext{context.globalContext, localVariables, args};
+    auto local = LocalContext{
+        context.globalContext, localVariables, args, context.module};
 
     for (auto &command : commands) {
         command(local);
