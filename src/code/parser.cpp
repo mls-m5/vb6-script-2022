@@ -3,6 +3,8 @@
 #include "functionbody.h"
 #include "lexer.h"
 #include "vbparsingerror.h"
+#include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iostream>
 
@@ -297,4 +299,9 @@ Module parse(std::istream &stream, std::filesystem::path path) {
     };
 
     return parseGlobal(line, nextToken, nextLine);
+}
+
+Module loadModule(std::filesystem::path path) {
+    auto file = std::ifstream{path};
+    return parse(file, path);
 }
