@@ -15,7 +15,6 @@ Sub Main()
 
 	B.X = A.X
 
-	Assert 10
-	'Assert A.X
-	'Assert A.Y
+	Assert A.X
+	Assert A.Y
 End Sub

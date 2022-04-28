@@ -310,17 +310,8 @@ FunctionArgumentValues evaluateArgumentList(
 
     for (auto &arg : args) {
         // TODO: Handle references
-        auto vor = ValueOrRef{arg(context)};
 
-        //        if (values.size() > 0) {
-        // TODO: Remove this
-        // TODO: Something is not working here
-        //            auto &value = values.at(0).get();
-        auto &value = vor.get();
-        std::cout << value.toString() << std::endl;
-        //        }
-
-        values.push_back(vor);
+        values.push_back(ValueOrRef{arg(context)});
     }
 
     return values;
