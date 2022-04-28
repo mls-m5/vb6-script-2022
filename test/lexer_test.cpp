@@ -25,6 +25,20 @@ TEST_CASE("more complicated") {
     EXPECT_EQ(line.size(), 5);
 }
 
+TEST_CASE("keywords") {
+    auto ss = std::istringstream{"Private Sub function"};
+
+    const auto f = CodeFile{ss, "test"};
+
+    EXPECT_EQ(f.lines.size(), 1);
+
+    auto &line = f.lines.front();
+    EXPECT_EQ(line.size(), 3);
+    EXPECT_EQ(line.at(0).keyword(), Token::Private);
+    EXPECT_EQ(line.at(1).keyword(), Token::Sub);
+    EXPECT_EQ(line.at(2).keyword(), Token::Function);
+}
+
 TEST_CASE("broken line") {
     auto ss = std::istringstream{"broken _ \n line"};
 
