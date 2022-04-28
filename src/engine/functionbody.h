@@ -1,20 +1,21 @@
 #pragma once
-#include "command.h"
 #include "context.h"
 #include "function.h"
 #include <vector>
 
 class FunctionBody {
-    using CommandType = std::function<void(LocalContext &)>;
+public:
+    using CommandT = std::function<void(LocalContext &)>;
 
+private:
     std::vector<Type> localVariables;
 
-    std::vector<CommandType> commands;
+    std::vector<CommandT> commands;
 
     Value returnValue;
 
 public:
-    void pushCommand(const CommandType &t);
+    void pushCommand(const CommandT &t);
 
     Value call(const FunctionArgumentValues &values,
                LocalContext &context) const;

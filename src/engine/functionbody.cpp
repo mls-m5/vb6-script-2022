@@ -1,7 +1,10 @@
 #include "functionbody.h"
 #include "classinstance.h"
 
-void FunctionBody::pushCommand(const CommandType &command) {
+void FunctionBody::pushCommand(const CommandT &command) {
+    if (!command) {
+        return;
+    }
     commands.push_back(command);
 }
 

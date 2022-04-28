@@ -24,6 +24,10 @@ FunctionArguments parseArguments(NextTokenT nextToken) {
     return args;
 }
 
+FunctionBody::CommandT parseCommand(Token *token, NextTokenT nextToken) {
+    return {};
+}
+
 std::unique_ptr<Function> parseFunction(Line *line,
                                         Scope scope,
                                         NextTokenT nextToken,
@@ -38,8 +42,15 @@ std::unique_ptr<Function> parseFunction(Line *line,
     auto body = std::make_shared<FunctionBody>();
 
     for (line = nextLine(); line; line = nextLine()) {
-        // Todo: Continune here with functionbody
-        body->pushCommand([](LocalContext &context) {});
+        token = nextToken();
+        if (!token.first) {
+            continue;
+        }
+        auto keyWord = token.first->keyword();
+        if (keyWord == Token::End) {
+            break;
+        }
+        body->pushCommand(parseCommand(token.first, nextToken));
     }
 
     Function::FuncT f = [body](const FunctionArgumentValues &args,
@@ -65,17 +76,19 @@ Module parseGlobal(Line *line, NextTokenT nextToken, NextLineT nextLine) {
             continue;
         }
 
-        if (*token.first == "Public") {
+        switch (token.first->keyword()) {
+        case Token::Public:
             currentScope = Public;
-        }
-        else if (*token.first == "Private") {
+            break;
+        case Token::Private:
             currentScope = Private;
-        }
-        else if (*token.first == "Sub") {
+            break;
+        case Token::Sub:
             module.addFunction(
                 parseFunction(line, Private, nextToken, nextLine));
-        }
-        else {
+            continue;
+            break;
+        default:
             throw VBParsingError{*token.first,
                                  "unexpected token at global scope"};
         }
