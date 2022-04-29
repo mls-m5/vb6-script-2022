@@ -65,6 +65,10 @@ struct Value {
 
     bool toBool() const;
 
+    bool isClass() const {
+        return typeName() == Type::Class;
+    }
+
     // Set value and change type at the same time
     //    void setAny(const Value &other) {
     //        value = other.value;

@@ -114,7 +114,14 @@ struct TokenPair {
 
 using NextLineT = std::function<Line *()>;
 using ExpressionT = std::function<ValueOrRef(LocalContext &)>;
-using IdentifierFuncT = std::function<Value &(LocalContext &context)>;
+using IdentifierFuncT = std::function<ValueOrRef(LocalContext &context)>;
+
+ExpressionT parseMethodCall(TokenPair &token);
+std::vector<ExpressionT> parseList(TokenPair &token);
+FunctionArgumentValues evaluateArgumentList(
+    const std::vector<ExpressionT> &args,
+    const FunctionArguments &functionArgs,
+    LocalContext &context);
 
 void parseAssert(bool condition,
                  const Location &location,
@@ -162,7 +169,7 @@ Type parseAsStatement(TokenPair &token) {
 
 //! For example
 //! Sub Hello(There As String, ByRef You as Integer, Optional ByVal Ref)
-FunctionArguments parseArguments(TokenPair &token) {
+FunctionArguments parseDeclarationArguments(TokenPair &token) {
     if (!token || token.first->content != "(") {
         throw VBParsingError{token.lastLoc,
                              "expected character '(' got " + token.content()};
@@ -230,8 +237,8 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token,
         auto memberIndex = type.classType->getVariableIndex(token.content());
         assertMemberIndex(memberIndex);
         token.next();
-        return [base, memberIndex](LocalContext &context) -> Value & {
-            auto &baseVar = base(context);
+        return [base, memberIndex](LocalContext &context) -> ValueOrRef {
+            auto &baseVar = base(context).get();
             if (baseVar.value.index() != Type::Struct) {
                 throw VBRuntimeError(
                     "trying to access member of non member type line " +
@@ -239,19 +246,32 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token,
             }
             auto &s = baseVar.get<StructT>();
 
-            return s->get(memberIndex);
+            return &s->get(memberIndex);
         };
     }
     else if (type.type == Type::Class) {
-        auto memberIndex = type.classType->getVariableIndex(token.content());
+        auto name = token.content();
+
+        auto argExpr = parseList(token);
+
+        if (auto f = type.classType->module->function(name)) {
+            return [base, f, argExpr](LocalContext &context) -> ValueOrRef {
+                //  TODO: Add arguments
+                auto args =
+                    evaluateArgumentList(argExpr, f->arguments(), context);
+                return f->call(args, context);
+            };
+        }
+
+        auto memberIndex = type.classType->getVariableIndex(name);
         assertMemberIndex(memberIndex);
 
         // TODO: Handle when there is circular dependencies and the class
         // is unknown on parse time
 
         token.next();
-        return [base, memberIndex](LocalContext &context) -> Value & {
-            auto &baseVar = base(context);
+        return [base, memberIndex](LocalContext &context) -> ValueOrRef {
+            auto &baseVar = base(context).get();
             if (baseVar.value.index() != Type::Class) {
                 throw VBRuntimeError(
                     "trying to access member of non member type line " +
@@ -287,17 +307,42 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
         };
     }
     else if (auto index = token.argument(name); index != -1) {
-        type = token.namedArguments.at(index).second;
+        //        type = token.namedArguments.at(index).second;
         expr = [index](LocalContext &context) -> Value & {
             return context.args.at(index).get();
         };
     }
     else if (auto index = token.currentModule->staticVariable(name);
              index != -1) {
-        type = token.currentModule->staticVariables.at(index).second.type();
+        //        type =
+        //        token.currentModule->staticVariables.at(index).second.type();
         expr = [index](LocalContext &context) -> Value & {
             return context.module->staticVariables.at(index).second;
         };
+    }
+    //    else if (token.currentModule->type() == ModuleType::Class) {
+    //        if (auto index =
+    //        token.currentModule->classType->getVariableIndex(name);
+    //            index != -1) {
+    //            auto &var =
+    //            token.currentModule->classType->variables.at(index);
+    //            //            auto type = var.type;
+    //            expr = [index](LocalContext &context) -> Value & {
+    //                // TODO: Maybe self/me argument should be handled
+    //                // differently...?
+    //                auto &me = context.args.at(0).get();
+    //                if (!me.isClass()) {
+    //                    throw VBRuntimeError{context.currentLocation(),
+    //                                         "Trying to call method on non
+    //                                         class"};
+    //                }
+    //                return me.get<ClassT>()->get(index);
+    //            };
+    //        }
+    //    }
+    else if (auto f = token.currentModule->function(name)) {
+        expr = [f = parseMethodCall(token)](
+                   LocalContext &context) -> ValueOrRef { return f(context); };
     }
 
     if (!expr) {
@@ -355,8 +400,8 @@ ExpressionT parseExpression(TokenPair &token) {
 
     case Token::Word: {
         auto id = parseIdentifier(token);
-        expr = [id](LocalContext &context) {
-            return ValueOrRef{&id(context)}; //
+        expr = [id](LocalContext &context) -> ValueOrRef {
+            return id(context); //
         };
     } break;
 
@@ -444,7 +489,7 @@ FunctionArgumentValues evaluateArgumentList(
     return values;
 }
 
-FunctionBody::CommandT parseMethodCall(TokenPair &token) {
+ExpressionT parseMethodCall(TokenPair &token) {
     auto methodName = token.first->content;
 
     token.next();
@@ -472,7 +517,7 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token) {
         auto args = evaluateArgumentList(
             argExpressionList, function->arguments(), context);
 
-        function->call(args, context);
+        return function->call(args, context);
     };
 }
 
@@ -574,16 +619,29 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         break;
 
     case Token::Word: {
-        auto type2 = token.second ? token.second->type() : Token::Empty;
-        if (type2 == Token::Operator ||
-            (token.second && token.second->content == ".")) {
-            // TODO: Fix this
+        {
             auto identifier = parseIdentifier(token);
-            return parseAssignment(token, identifier);
+            if (token.content() == "=") {
+                return parseAssignment(token, identifier);
+            }
+            else {
+                throw VBParsingError{*token.first,
+                                     "unexpected reserved keyword " +
+                                         token.first->content};
+            }
+            break;
         }
-        else {
-            return parseMethodCall(token);
-        }
+
+        //        auto type2 = token.second ? token.second->type() :
+        //        Token::Empty; if (type2 == Token::Operator ||
+        //            (token.second && token.second->content == ".")) {
+        //            // TODO: Fix this
+        //            auto identifier = parseIdentifier(token);
+        //            return parseAssignment(token, identifier);
+        //        }
+        //        else {
+        //            return parseMethodCall(token);
+        //        }
     }
     default:
 
@@ -640,7 +698,7 @@ std::unique_ptr<Function> parseFunction(Line *line,
 
     token.next();
 
-    auto arguments = parseArguments(token);
+    auto arguments = parseDeclarationArguments(token);
 
     auto body = std::make_shared<FunctionBody>();
 

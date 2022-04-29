@@ -41,4 +41,7 @@ struct LocalContext {
                  Module *module = {});
 
     GlobalContext &globalContext;
+
+    // Source location for error messages
+    struct Location currentLocation() const;
 };
