@@ -6,19 +6,20 @@
 #include <vector>
 
 struct GlobalContext {
-    std::map<std::string, Value> globalVariables;
+    std::vector<std::shared_ptr<class Module>> modules;
+    //    std::map<std::string, Value> globalVariables;
 
-    void set(const std::string &name, Value value) {
-        globalVariables[name] = std::move(value);
-    }
+    //    void set(const std::string &name, Value value) {
+    //        globalVariables[name] = std::move(value);
+    //    }
 
-    Value &get(const std::string &name) {
-        return globalVariables.at(name);
-    }
+    //    Value &get(const std::string &name) {
+    //        return globalVariables.at(name);
+    //    }
 
-    const Value &get(const std::string &name) const {
-        return globalVariables.at(name);
-    }
+    //    const Value &get(const std::string &name) const {
+    //        return globalVariables.at(name);
+    //    }
 };
 
 struct Module;

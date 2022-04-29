@@ -8,7 +8,7 @@
 
 TEST_SUIT_BEGIN;
 
-auto inner = Function::FuncT{
+auto innerAssert = Function::FuncT{
     [&](const FunctionArgumentValues &args, LocalContext &context) {
         if (args.size() != 1) {
             throw std::runtime_error{
@@ -29,23 +29,27 @@ auto inner = Function::FuncT{
     }};
 
 for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
+    if (it.path().extension() != ".mod") {
+        continue;
+    }
+
     unittest::testMap[it.path().string()] = [path = it.path(),
-                                             inner]() -> void {
+                                             innerAssert]() -> void {
         std::cout << path << std::endl;
 
         auto module = loadModule(path);
 
-        module.addFunction(std::make_unique<Function>(
+        module->addFunction(std::make_unique<Function>(
             "Assert",
             FunctionArguments{{
                 FunctionArgument{Type{Type::Integer}, "x"},
                 FunctionArgument{Type{Type::Integer}, "y"},
             }},
-            inner));
+            innerAssert));
 
-        auto context = TestContext{&module};
+        auto context = TestContext{module.get()};
 
-        module.function("Main")->call({}, context.local);
+        module->function("Main")->call({}, context.local);
     };
 }
 

@@ -31,5 +31,4 @@ Sub Main()
 	TestTwo A
 
 	Assert A.X
-
 End Sub

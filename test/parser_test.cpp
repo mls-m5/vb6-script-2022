@@ -15,9 +15,9 @@ End Sub
 
     auto module = parse(ss, "");
 
-    auto context = TestContext{&module};
+    auto context = TestContext{module.get()};
 
-    auto f = module.function("Main");
+    auto f = module->function("Main");
 
     EXPECT(f);
 
@@ -47,7 +47,7 @@ End Sub
 
     auto module = parse(ss, "");
 
-    auto context = TestContext{&module};
+    auto context = TestContext{module.get()};
 
     bool isCalled = false;
     int numArgs = 0;
@@ -66,7 +66,7 @@ End Sub
             return Value{};
         }};
 
-    module.addFunction(std::make_unique<Function>(
+    module->addFunction(std::make_unique<Function>(
         "TestSet",
         FunctionArguments{{
             FunctionArgument{Type{Type::Integer}, "x"},
@@ -74,7 +74,7 @@ End Sub
         }},
         inner));
 
-    auto f = module.function("Main");
+    auto f = module->function("Main");
 
     EXPECT(f);
 

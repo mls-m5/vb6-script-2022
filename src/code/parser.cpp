@@ -580,12 +580,12 @@ std::unique_ptr<Function> parseFunction(Line *line,
     return function;
 }
 
-Module parseGlobal(Line *line,
-                   NextTokenT nextToken,
-                   NextLineT nextLine,
-                   std::filesystem::path path) {
-    auto module = Module{};
-    module.path = path;
+std::unique_ptr<Module> parseGlobal(Line *line,
+                                    NextTokenT nextToken,
+                                    NextLineT nextLine,
+                                    std::filesystem::path path) {
+    auto module = std::make_unique<Module>();
+    module->path = path;
 
     Scope currentScope;
 
@@ -593,7 +593,7 @@ Module parseGlobal(Line *line,
         currentScope = Private;
         TokenPair token{};
         token.f = nextToken;
-        token.currentModule = &module;
+        token.currentModule = module.get();
         token.next();
 
         if (!token.first) {
@@ -608,7 +608,7 @@ Module parseGlobal(Line *line,
             currentScope = Private;
             break;
         case Token::Sub:
-            module.addFunction(parseFunction(line, Private, token, nextLine));
+            module->addFunction(parseFunction(line, Private, token, nextLine));
             continue;
             break;
         case Token::Option:
@@ -634,7 +634,7 @@ Module parseGlobal(Line *line,
 
         switch (token.first->type()) {
         case Token::Sub:
-            module.addFunction(
+            module->addFunction(
                 parseFunction(line, currentScope, token, nextLine));
             break;
 
@@ -654,7 +654,8 @@ Module parseGlobal(Line *line,
 
 } // namespace
 
-Module parse(std::istream &stream, std::filesystem::path path) {
+std::unique_ptr<Module> parse(std::istream &stream,
+                              std::filesystem::path path) {
 
     auto f = CodeFile{stream, path};
 
@@ -693,7 +694,7 @@ Module parse(std::istream &stream, std::filesystem::path path) {
     return parseGlobal(line, nextToken, nextLine, path);
 }
 
-Module loadModule(std::filesystem::path path) {
+std::unique_ptr<Module> loadModule(std::filesystem::path path) {
     auto file = std::ifstream{path};
     return parse(file, path);
 }
