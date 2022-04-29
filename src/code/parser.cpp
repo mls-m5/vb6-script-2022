@@ -97,6 +97,13 @@ void parseAssert(bool condition,
     }
 }
 
+void assertEmpty(TokenPair &token) {
+    if (token) {
+        throw VBParsingError{token.lastLoc,
+                             "Expected end of line, got " + token.content()};
+    }
+};
+
 Type parseAsStatement(TokenPair &token) {
     auto loc = token.first->loc;
     token.next();
@@ -187,6 +194,11 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token,
         token.next();
         return [base, memberIndex](LocalContext &context) -> Value & {
             auto &baseVar = base(context);
+            if (baseVar.value.index() != Type::Struct) {
+                throw VBRuntimeError(
+                    "trying to access member of non member type line " +
+                    std::to_string(context.line));
+            }
             auto &s = baseVar.get<StructT>();
 
             return s->get(memberIndex);
@@ -331,13 +343,9 @@ FunctionArgumentValues evaluateArgumentList(
     auto values = FunctionArgumentValues{};
     values.reserve(args.size());
 
-    // TODO: Handle ByVal here
-
     for (size_t i = 0; i < args.size(); ++i) {
-        //    for (auto &arg : args) {
         auto &arg = args.at(i);
         auto &funcArg = functionArgs.at(i);
-        // TODO: Handle references
 
         if (funcArg.isByRef) {
             values.push_back(arg(context));
@@ -355,6 +363,8 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token) {
 
     token.next();
     auto argExpressionList = parseList(token);
+
+    assertEmpty(token);
 
     return [methodName,
             argExpressionList,
@@ -460,6 +470,7 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         token.next();
         auto expr = parseExpression(token);
 
+        assertEmpty(token);
         return [expr](LocalContext &context) {
             std::cout << expr(context).get().toString() << std::endl; //
         };
@@ -469,6 +480,7 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         token.next();
         parseLocalVariableDeclaration(token);
 
+        assertEmpty(token);
         break;
 
     case Token::Word: {
