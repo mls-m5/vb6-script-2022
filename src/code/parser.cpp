@@ -114,7 +114,7 @@ struct TokenPair {
 
 using NextLineT = std::function<Line *()>;
 using ExpressionT = std::function<ValueOrRef(LocalContext &)>;
-using IdentifierFuncT = std::function<Value &(LocalContext &context)>;
+using IdentifierFuncT = std::function<ValueOrRef(LocalContext &context)>;
 
 void parseAssert(bool condition,
                  const Location &location,
@@ -226,40 +226,42 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token,
         }
     };
 
+    auto name = token.content();
+
     if (type.type == Type::Struct) {
-        auto memberIndex = type.classType->getVariableIndex(token.content());
+        auto memberIndex = type.classType->getVariableIndex(name);
         assertMemberIndex(memberIndex);
         token.next();
-        return [base, memberIndex](LocalContext &context) -> Value & {
-            auto &baseVar = base(context);
-            if (baseVar.value.index() != Type::Struct) {
+        return [base, memberIndex](LocalContext &context) -> ValueOrRef {
+            auto baseVar = base(context);
+            if (baseVar->value.index() != Type::Struct) {
                 throw VBRuntimeError(
-                    "trying to access member of non member type line " +
+                    "trying to access member of non struct type line " +
                     std::to_string(context.line));
             }
-            auto &s = baseVar.get<StructT>();
+            auto &s = baseVar->get<StructT>();
 
-            return s->get(memberIndex);
+            return {&s->get(memberIndex)};
         };
     }
     else if (type.type == Type::Class) {
-        auto memberIndex = type.classType->getVariableIndex(token.content());
+        auto memberIndex = type.classType->getVariableIndex(name);
         assertMemberIndex(memberIndex);
 
         // TODO: Handle when there is circular dependencies and the class
         // is unknown on parse time
 
         token.next();
-        return [base, memberIndex](LocalContext &context) -> Value & {
-            auto &baseVar = base(context);
-            if (baseVar.value.index() != Type::Class) {
+        return [base, memberIndex](LocalContext &context) -> ValueOrRef {
+            auto baseVar = base(context);
+            if (baseVar->value.index() != Type::Class) {
                 throw VBRuntimeError(
                     "trying to access member of non member type line " +
                     std::to_string(context.line));
             }
-            auto &s = baseVar.get<ClassT>();
+            auto &s = baseVar->get<ClassT>();
 
-            return s->get(memberIndex);
+            return {&s->get(memberIndex)};
         };
     }
 
@@ -282,21 +284,21 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
 
     if (auto index = token.localVariable(name); index != -1) {
         type = token.currentFunctionBody->variable(index);
-        expr = [index](LocalContext &context) -> Value & {
-            return context.localVariables.at(index);
+        expr = [index](LocalContext &context) -> ValueOrRef {
+            return {&context.localVariables.at(index)};
         };
     }
     else if (auto index = token.argument(name); index != -1) {
         type = token.namedArguments.at(index).second;
-        expr = [index](LocalContext &context) -> Value & {
-            return context.args.at(index).get();
+        expr = [index](LocalContext &context) -> ValueOrRef {
+            return {&context.args.at(index).get()};
         };
     }
     else if (auto index = token.currentModule->staticVariable(name);
              index != -1) {
         type = token.currentModule->staticVariables.at(index).second.type();
-        expr = [index](LocalContext &context) -> Value & {
-            return context.module->staticVariables.at(index).second;
+        expr = [index](LocalContext &context) -> ValueOrRef {
+            return {&context.module->staticVariables.at(index).second};
         };
     }
 
@@ -355,8 +357,8 @@ ExpressionT parseExpression(TokenPair &token) {
 
     case Token::Word: {
         auto id = parseIdentifier(token);
-        expr = [id](LocalContext &context) {
-            return ValueOrRef{&id(context)}; //
+        expr = [id](LocalContext &context) -> ValueOrRef {
+            return id(context); //
         };
     } break;
 
@@ -547,7 +549,7 @@ FunctionBody::CommandT parseAssignment(TokenPair &token,
     auto expr = parseExpression(token);
 
     return [target, expr](LocalContext &context) {
-        target(context) = expr(context).get();
+        *target(context) = *expr(context);
     };
 }
 

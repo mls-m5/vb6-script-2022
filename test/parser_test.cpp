@@ -61,8 +61,8 @@ End Sub
             if (numArgs != 2) {
                 return Value{};
             }
-            arg1Res = args.at(0).get().get<IntegerT>();
-            arg2Res = args.at(1).get().get<IntegerT>();
+            arg1Res = args.at(0)->toInteger();
+            arg2Res = args.at(1)->toInteger();
             return Value{};
         }};
 
