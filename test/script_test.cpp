@@ -39,7 +39,7 @@ auto innerAssert = Function::FuncT{
         auto index = value.value.index();
 
         std::cout << value.toString() << std::endl;
-        auto arg = value.get<IntegerT>();
+        auto arg = value.toInteger();
         if (!arg) {
             throw std::runtime_error{context.module->path.string() + ":" +
                                      std::to_string(context.line) +

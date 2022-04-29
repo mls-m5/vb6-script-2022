@@ -343,9 +343,13 @@ ExpressionT parseExpression(TokenPair &token) {
         };
         break;
     case Token::NumberLiteral:
-        // Todo: Handle floating point
-        expr = [i = std::stoi(token.first->content)](LocalContext &) {
-            return ValueOrRef{{IntegerT{i}}};
+        expr = [l = std::stol(token.first->content)](LocalContext &) {
+            return ValueOrRef{{LongT{l}}};
+        };
+        break;
+    case Token::FloatLiteral:
+        expr = [i = std::stod(token.first->content)](LocalContext &) {
+            return ValueOrRef{{DoubleT{i}}};
         };
         break;
 
@@ -544,7 +548,6 @@ FunctionBody::CommandT parseAssignment(TokenPair &token,
 
     return [target, expr](LocalContext &context) {
         target(context) = expr(context).get();
-        //        std::cout << target(context).toString() << std::endl;
     };
 }
 

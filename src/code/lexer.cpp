@@ -55,8 +55,13 @@ Line splitString(std::string str, size_t lineNum) {
             continue;
         }
 
+        // TODO: Handle numbers starting with '.' like ".34"
         if (type == Num && lastType == Alpha) {
             // Words can contain numbers but not start with numbers
+            line.back().content.push_back(c);
+            continue;
+        }
+        else if (c == '.' && lastType == Num) {
             line.back().content.push_back(c);
             continue;
         }

@@ -39,3 +39,10 @@ Visual basic only has single character operators (ie * or +). That makes
 the lexing relatively simple.
 
 ## Parsing
+
+
+## Values
+
+Values does not change type. In the original VB6, when not assigning a type
+to a variable it was "Variant" as default. Since I like strict types I will
+implement no such thing.

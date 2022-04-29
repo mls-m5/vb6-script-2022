@@ -82,4 +82,14 @@ TEST_CASE("words with numbers in them") {
     EXPECT_EQ(f.lines.front().size(), 1);
 }
 
+TEST_CASE("floating point numbers") {
+    auto ss = std::stringstream{"2.8"};
+
+    const auto f = CodeFile{ss, ""};
+    EXPECT_EQ(f.lines.size(), 1);
+    std::cout << f.lines.front().front().content << std::endl;
+
+    EXPECT_EQ(f.lines.front().size(), 1);
+}
+
 TEST_SUIT_END

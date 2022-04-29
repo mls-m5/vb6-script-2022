@@ -59,6 +59,12 @@ struct Value {
 
     std::string toString() const;
 
+    LongT toInteger() const;
+
+    DoubleT toFloat() const;
+
+    bool toBool() const;
+
     // Set value and change type at the same time
     //    void setAny(const Value &other) {
     //        value = other.value;

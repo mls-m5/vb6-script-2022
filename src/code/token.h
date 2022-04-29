@@ -15,6 +15,7 @@ struct Token {
         StringLiteral,
         EOFKeyword,
         NumberLiteral,
+        FloatLiteral,
         Operator,
         TOKEN_KEYWORD_LIST
     };

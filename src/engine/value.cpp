@@ -56,3 +56,45 @@ std::string Value::toString() const {
 
     return {};
 }
+
+LongT Value::toInteger() const {
+    switch (typeName()) {
+    case Type::String:
+        return std::stol(get<std::string>());
+    case Type::Single:
+        return get<SingleT>() + .5;
+    case Type::Double:
+        return get<DoubleT>() + .5;
+    case Type::Long:
+        return get<LongT>();
+    case Type::Integer:
+        return get<IntegerT>();
+    case Type::Class:
+        throw VBRuntimeError{"could not convert class to integer"};
+    case Type::Struct:
+        throw VBRuntimeError{"could not convert struct to integer"};
+    }
+
+    return {};
+}
+
+DoubleT Value::toFloat() const {
+    switch (typeName()) {
+    case Type::String:
+        return std::stod(get<std::string>());
+    case Type::Single:
+        return get<SingleT>();
+    case Type::Double:
+        return get<DoubleT>();
+    case Type::Long:
+        return get<LongT>();
+    case Type::Integer:
+        return get<IntegerT>();
+    case Type::Class:
+        throw VBRuntimeError{"could not convert class to integer"};
+    case Type::Struct:
+        throw VBRuntimeError{"could not convert struct to integer"};
+    }
+
+    return {};
+}

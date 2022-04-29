@@ -33,7 +33,12 @@ Token::Keyword getKeyword(std::string name) {
     }
 
     if (std::isdigit(name.front())) {
-        return Token::NumberLiteral;
+        if (name.find('.') != std::string::npos) {
+            return Token::FloatLiteral;
+        }
+        else {
+            return Token::NumberLiteral;
+        }
     }
 
     name = toLower(name);
