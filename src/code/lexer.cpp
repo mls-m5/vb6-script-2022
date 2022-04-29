@@ -55,7 +55,12 @@ Line splitString(std::string str, size_t lineNum) {
             continue;
         }
 
-        if (type != lastType || type == Operator) {
+        if (type == Num && lastType == Alpha) {
+            // Words can contain numbers but not start with numbers
+            line.back().content.push_back(c);
+            continue;
+        }
+        else if (type != lastType || type == Operator) {
             line.push_back(Token{std::string{c}, lineNum});
         }
         else {

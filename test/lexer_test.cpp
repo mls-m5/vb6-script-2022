@@ -72,4 +72,14 @@ TEST_CASE("remove blank lines") {
     EXPECT_EQ(f.lines.size(), 2);
 }
 
+TEST_CASE("words with numbers in them") {
+    auto ss = std::stringstream{"hello2you2"};
+
+    const auto f = CodeFile{ss, ""};
+    EXPECT_EQ(f.lines.size(), 1);
+    std::cout << f.lines.front().front().content << std::endl;
+
+    EXPECT_EQ(f.lines.front().size(), 1);
+}
+
 TEST_SUIT_END
