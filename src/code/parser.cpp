@@ -35,21 +35,23 @@ struct TokenPair {
     std::vector<std::shared_ptr<Module>> modules;
 
     FunctionBody *currentFunctionBody = nullptr;
-    std::vector<std::string> namedLocalVariables;
+    //    std::vector<std::string> namedLocalVariables;
     std::vector<std::pair<std::string, Type>> namedArguments;
 
     void endFunction() {
         currentFunctionBody = nullptr;
-        namedLocalVariables.clear();
+        //        namedLocalVariables.clear();
         namedArguments.clear();
     }
 
     int localVariable(std::string_view name) {
-        for (size_t i = 0; i < namedLocalVariables.size(); ++i) {
-            if (namedLocalVariables.at(i) == name) {
-                return i;
-            }
-        }
+        //        for (size_t i = 0; i < namedLocalVariables.size(); ++i) {
+        //            if (namedLocalVariables.at(i) == name) {
+        //                return i;
+        //            }
+        //        }
+
+        auto index = currentFunctionBody->variableIndex(name);
 
         return -1;
     }
@@ -301,16 +303,14 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
         //        }
         if (auto index = context.module->staticVariable(name); index != -1) {
             auto type = context.module->staticVariables.at(index).second.type();
-            //        expr = [index](LocalContext &context) -> ValueOrRef {
             return {&context.module->staticVariables.at(index).second};
-            //        };
         }
         else if (auto f = context.function(name)) {
             // TODO: Cache function pointer
             return FunctionRef{f};
         }
         // TODO: Handle multiple arguments
-        else if (auto index = 0 /*context.localVariables.at(name)*/;
+        else if (auto index = context.functionBody->variableIndex(name);
                  index != -1) {
             auto type = context.functionBody->variable(index);
             return {&context.localVariables.at(index)};
@@ -513,9 +513,9 @@ void parseLocalVariableDeclaration(TokenPair &token) {
 
     auto type = parseAsStatement(token);
 
-    token.namedLocalVariables.push_back(name);
+    //    token.namedLocalVariables.push_back(name);
 
-    token.currentFunctionBody->pushLocalVariable(type);
+    token.currentFunctionBody->pushLocalVariable(name, type);
 }
 
 void parseMemberDeclaration(TokenPair &token) {

@@ -22,7 +22,7 @@ struct LocalContext {
     size_t line = 0;
 
     LocalContext(GlobalContext &globalContext,
-                 const std::vector<Type> vars = {},
+                 const std::vector<std::pair<std::string, Type>> vars = {},
                  FunctionArgumentValues = {},
                  Module *module = {});
 

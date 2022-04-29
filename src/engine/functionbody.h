@@ -9,7 +9,7 @@ public:
     using CommandT = std::function<void(LocalContext &)>;
 
 private:
-    std::vector<Type> _localVariables;
+    std::vector<std::pair<std::string, Type>> _localVariables;
     std::vector<CommandT> _commands;
     std::vector<size_t> _line;
 
@@ -20,7 +20,9 @@ public:
     //    Type variable(int i);
     Type variable(int i) const;
 
-    void pushLocalVariable(Type t);
+    int variableIndex(std::string_view name) const;
+
+    void pushLocalVariable(std::string, Type t);
 
     void pushCommand(const CommandT &t, size_t line);
 

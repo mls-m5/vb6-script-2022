@@ -4,14 +4,14 @@
 #include "module.h"
 
 LocalContext::LocalContext(GlobalContext &globalContext,
-                           const std::vector<Type> vars,
+                           const std::vector<std::pair<std::string, Type>> vars,
                            FunctionArgumentValues args,
                            Module *module)
     : globalContext{globalContext}
     , module{module} {
     localVariables.reserve(vars.size());
     for (auto &var : vars) {
-        localVariables.push_back(Value::create(var));
+        localVariables.push_back(Value::create(var.second));
     }
 
     this->args = std::move(args);

@@ -6,11 +6,20 @@
 // }
 
 Type FunctionBody::variable(int i) const {
-    return _localVariables.at(i);
+    return _localVariables.at(i).second;
 }
 
-void FunctionBody::pushLocalVariable(Type t) {
-    _localVariables.push_back(t);
+int FunctionBody::variableIndex(std::string_view name) const {
+    for (size_t i = 0; i < _localVariables.size(); ++i) {
+        if (_localVariables.at(i).first == name) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void FunctionBody::pushLocalVariable(std::string name, Type t) {
+    _localVariables.push_back({std::move(name), t});
 }
 
 void FunctionBody::pushCommand(const CommandT &command, size_t line) {
@@ -28,7 +37,6 @@ Value FunctionBody::call(const FunctionArgumentValues &args,
 
     local.functionBody = this;
 
-    //    for (auto &command : _commands) {
     for (size_t i = 0; i < _commands.size(); ++i) {
         auto &command = _commands.at(i);
         auto line = _line.at(i);
