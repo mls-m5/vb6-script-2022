@@ -66,7 +66,7 @@ for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
             "Assert",
             FunctionArguments{{
                 FunctionArgument{Type{Type::Integer}, "x"},
-                FunctionArgument{Type{Type::Integer}, "y"},
+                //                FunctionArgument{Type{Type::Integer}, "y"},
             }},
             innerAssert));
 

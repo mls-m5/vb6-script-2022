@@ -124,11 +124,10 @@ struct TokenPair {
 };
 
 struct MethodReferenceReturn {
-    ClassType *classType = nullptr;
-    int function = -1;
+    Function *f = nullptr;
 
     operator bool() const {
-        return function == -1;
+        return f;
     }
 };
 
@@ -146,7 +145,7 @@ struct LateIdentifierResult {
 
 using LateIdentifierFunc = std::function<LateIdentifierResult(LocalContext &)>;
 
-ExpressionT parseMethodCall(TokenPair &token, IdentifierFuncT &base);
+ExpressionT parseMethodCall(TokenPair &token, const IdentifierFuncT &base);
 
 std::vector<ExpressionT> parseList(TokenPair &token);
 
@@ -350,11 +349,10 @@ LateIdentifierFunc parseIdentifier(TokenPair &token) {
     auto loc = token.first->loc;
     auto name = token.first->content;
 
-    token.next();
-
     auto getVarOrFunction = LateIdentifierFunc{};
 
     auto simpleExpr = ExpressionT{};
+    token.next();
 
     // These first will be known att parse time
     if (auto index = token.localVariable(name); index != -1) {
@@ -392,9 +390,20 @@ LateIdentifierFunc parseIdentifier(TokenPair &token) {
     else if (auto f = token.function(name)) {
         auto base = IdentifierFuncT{};
 
-        simpleExpr = [f = parseMethodCall(token, base)](
-                         LocalContext &context) -> ValueOrRef {
-            return f(context);
+        // No realtime lookup is necessary
+        base = [f](LocalContext &context) -> MethodReferenceReturn {
+            return {f};
+        };
+
+        //        simpleExpr = [f = parseMethodCall(token, base)](
+        //                         LocalContext &context) -> ValueOrRef {
+        //            return f(context);
+        //        };
+
+        return [base](LocalContext &context) -> LateIdentifierResult {
+            return LateIdentifierResult{
+                .f = base,
+            };
         };
     }
 
@@ -408,10 +417,11 @@ LateIdentifierFunc parseIdentifier(TokenPair &token) {
         };
     }
 
+    //    token.next();
+
     if (!getVarOrFunction) {
         throw VBParsingError{loc, "could not find variable or method " + name};
     }
-
     else if (token.content() == ".") {
 
         // Return a function that either connection to right function and then
@@ -460,7 +470,7 @@ ExpressionT parseNew(TokenPair &token) {
 }
 
 ExpressionT parseExpression(TokenPair &token) {
-    auto keyword = token.first->type();
+    auto keyword = token.type();
 
     ExpressionT expr;
 
@@ -469,16 +479,19 @@ ExpressionT parseExpression(TokenPair &token) {
         expr = [str = token.first->content](LocalContext &) {
             return ValueOrRef{{str}};
         };
+        token.next();
         break;
     case Token::NumberLiteral:
         expr = [l = std::stol(token.first->content)](LocalContext &) {
             return ValueOrRef{{LongT{l}}};
         };
+        token.next();
         break;
     case Token::FloatLiteral:
         expr = [i = std::stod(token.first->content)](LocalContext &) {
             return ValueOrRef{{DoubleT{i}}};
         };
+        token.next();
         break;
 
     case Token::Word: {
@@ -506,7 +519,7 @@ ExpressionT parseExpression(TokenPair &token) {
         throw VBParsingError{*token.first, "failied to parse expression"};
     }
 
-    token.next();
+    //    token.next();
 
     if (!token.first) {
         return expr;
@@ -563,6 +576,10 @@ FunctionArgumentValues evaluateArgumentList(
     auto values = FunctionArgumentValues{};
     values.reserve(args.size());
 
+    if (functionArgs.size() != args.size()) {
+        throw "this should not happend.. yet";
+    }
+
     for (size_t i = 0; i < args.size(); ++i) {
         auto &arg = args.at(i);
         auto &funcArg = functionArgs.at(i);
@@ -578,27 +595,25 @@ FunctionArgumentValues evaluateArgumentList(
     return values;
 }
 
-ExpressionT parseMethodCall(TokenPair &token, IdentifierFuncT &base) {
-    auto methodName = token.first->content;
-
-    token.next();
+ExpressionT parseMethodCall(TokenPair &token, const IdentifierFuncT &base) {
     auto argExpressionList = parseList(token);
 
     assertEmpty(token);
 
-    return [methodName,
+    return [base,
             argExpressionList,
             function = static_cast<Function *>(nullptr),
             loc = token.lastLoc](LocalContext &context) mutable {
         if (!function) {
-            function = lookupFunction(methodName, context);
+            function = std::get<1>(base)(context).f;
+
             if (!function) {
-                VBRuntimeError{"could not find function " + methodName};
+                VBRuntimeError{context.currentLocation(),
+                               "could not find function "};
             }
             else {
                 if (argExpressionList.size() > function->arguments().size()) {
-                    VBParsingError{
-                        loc, "to many argument for function " + methodName};
+                    VBParsingError{loc, "to many argument for function"};
                 }
             }
         }
@@ -690,7 +705,7 @@ FunctionBody::CommandT parseAssignment(TokenPair &token, ExpressionT target) {
 //! A command is a line inside a function that starts at the beginning of
 //! the line
 FunctionBody::CommandT parseCommand(TokenPair &token) {
-    switch (token.first->type()) {
+    switch (token.type()) {
     case Token::Print: {
         parseAssert(token.second, *token.first, "expected expression");
         token.next();
@@ -740,18 +755,20 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
                         f = std::get<1>(res.f)(context);
                     }
 
-                    auto classFunction = f.classType->function(f.function);
+                    auto classFunction = f.f;
 
                     return classFunction->call(
                         evaluateArgumentList(
                             argExpr, classFunction->arguments(), context),
                         context);
                 };
+
+                return expr;
             }
             else {
-                throw VBParsingError{*token.first,
+                throw VBParsingError{token.lastLoc,
                                      "unexpected reserved keyword " +
-                                         token.first->content};
+                                         token.content()};
             }
             break;
         }
