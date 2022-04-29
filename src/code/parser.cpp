@@ -627,7 +627,8 @@ Module parseGlobal(Line *line,
 
         token.next();
 
-        if (token) {
+        if (!token) {
+            throw VBParsingError{token.lastLoc, "Unexpected end of line"};
             continue;
         }
 
