@@ -14,9 +14,11 @@ private:
     std::vector<size_t> _line;
 
     Value _returnValue;
+    Function *_function;
 
 public:
-    Type variable(int i);
+    //    Type variable(int i);
+    Type variable(int i) const;
 
     void pushLocalVariable(Type t);
 
@@ -24,4 +26,12 @@ public:
 
     Value call(const FunctionArgumentValues &values,
                LocalContext &context) const;
+
+    void function(Function *function) {
+        _function = function;
+    }
+
+    const Function *function() const {
+        return _function;
+    }
 };

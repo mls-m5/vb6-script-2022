@@ -45,9 +45,9 @@ Private Sub Main()
 End Sub
 )_"};
 
-    auto module = parse(ss, "");
-
-    auto context = TestContext{module.get()};
+    auto context = TestContext{nullptr};
+    auto testModule = std::make_shared<Module>();
+    context.global.modules.push_back(testModule);
 
     bool isCalled = false;
     int numArgs = 0;
@@ -55,7 +55,8 @@ End Sub
     int arg2Res = -1;
 
     auto inner = Function::FuncT{
-        [&](const FunctionArgumentValues &args, LocalContext &) {
+        [&](const FunctionArgumentValues &args, LocalContext &context) {
+            context.module = testModule.get();
             isCalled = true;
             numArgs = args.size();
             if (numArgs != 2) {
@@ -66,13 +67,16 @@ End Sub
             return Value{};
         }};
 
-    module->addFunction(std::make_unique<Function>(
+    testModule->addFunction(std::make_unique<Function>(
         "TestSet",
         FunctionArguments{{
             FunctionArgument{Type{Type::Integer}, "x"},
             FunctionArgument{Type{Type::Integer}, "y"},
         }},
         inner));
+
+    auto module = parse(ss, "", context.global.modules);
+    context.local.module = module.get();
 
     auto f = module->function("Main");
 

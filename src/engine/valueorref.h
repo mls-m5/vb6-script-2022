@@ -2,9 +2,21 @@
 
 #include "value.h"
 
+struct FunctionRef {
+    const class Function *function;
+
+    const Function *get() {
+        return function;
+    }
+
+    const Function *get() const {
+        return function;
+    }
+};
+
 struct ValueOrRef {
 private:
-    std::variant<Value, Value *> value;
+    std::variant<Value, Value *, FunctionRef> value;
 
 public:
     ValueOrRef() = delete;
@@ -17,6 +29,8 @@ public:
         : value{std::move(value)} {}
     ValueOrRef(Value *value)
         : value{value} {}
+    ValueOrRef(FunctionRef ref)
+        : value{ref} {}
 
     Value &get() {
         if (value.index() == 0) {
@@ -34,6 +48,10 @@ public:
         else {
             return *std::get<1>(value);
         }
+    }
+
+    const FunctionRef &function() {
+        return std::get<FunctionRef>(value);
     }
 
     Value *operator->() {

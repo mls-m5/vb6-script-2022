@@ -1,5 +1,7 @@
 #include "context.h"
+#include "Location.h"
 #include "classinstance.h"
+#include "module.h"
 
 LocalContext::LocalContext(GlobalContext &globalContext,
                            const std::vector<Type> vars,
@@ -13,4 +15,28 @@ LocalContext::LocalContext(GlobalContext &globalContext,
     }
 
     this->args = std::move(args);
+}
+
+Location LocalContext::currentLocation() const {
+    if (module) {
+        return Location{
+            line,
+            std::make_shared<std::filesystem::path>(module->path),
+        };
+    }
+
+    auto loc = Location{
+        line,
+        std::make_shared<std::filesystem::path>("<no file>"),
+    };
+
+    return loc;
+}
+
+const Function *LocalContext::function(std::string_view name) const {
+    for (auto &m : globalContext.modules) {
+        return m->function(name);
+    }
+
+    return nullptr;
 }

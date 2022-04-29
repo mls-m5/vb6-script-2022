@@ -2,6 +2,6 @@
 #include <iostream>
 
 Value Function::call(const FunctionArgumentValues &args,
-                     LocalContext &context) {
+                     LocalContext &context) const {
     return _f(args, context);
 }

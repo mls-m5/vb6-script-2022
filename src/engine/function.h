@@ -32,9 +32,9 @@ public:
         , _arguments{std::move(args)}
         , _f{f} {}
 
-    Value call(const FunctionArgumentValues &args, LocalContext &context);
+    Value call(const FunctionArgumentValues &args, LocalContext &context) const;
 
-    std::string_view name() {
+    std::string_view name() const {
         return _name;
     }
 
