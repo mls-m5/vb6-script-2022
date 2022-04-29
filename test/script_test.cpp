@@ -61,20 +61,23 @@ for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
 
         auto imports = parseImports(path);
 
-        for (auto &import : imports) {
-            context.global.modules.push_back(
-                loadModule(import, context.global.modules));
-        }
-
-        auto module = loadModule(path, context.global.modules);
-
-        module->addFunction(std::make_unique<Function>(
+        auto testModule = std::make_shared<Module>();
+        testModule->addFunction(std::make_unique<Function>(
             "Assert",
             FunctionArguments{{
                 FunctionArgument{Type{Type::Integer}, "x"},
                 FunctionArgument{Type{Type::Integer}, "y"},
             }},
             innerAssert));
+
+        context.global.modules.push_back(testModule);
+
+        for (auto &import : imports) {
+            context.global.modules.push_back(
+                loadModule(import, context.global.modules));
+        }
+
+        auto module = loadModule(path, context.global.modules);
 
         context.local.module = module.get();
 

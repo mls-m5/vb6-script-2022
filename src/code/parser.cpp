@@ -110,14 +110,46 @@ struct TokenPair {
 
         return nullptr;
     }
+
+    Function *function(std::string_view name) const {
+        for (auto &m : modules) {
+            if (m->type() == ModuleType::Module) {
+                if (auto f = m->function(name)) {
+                    return f;
+                }
+            }
+        }
+        return nullptr;
+    }
+};
+
+struct MethodReferenceReturn {
+    ClassType *classType = nullptr;
+    int function = -1;
+
+    operator bool() const {
+        return function == -1;
+    }
 };
 
 using NextLineT = std::function<Line *()>;
 using ExpressionT = std::function<ValueOrRef(LocalContext &)>;
-using IdentifierFuncT = std::function<ValueOrRef(LocalContext &context)>;
+using MethodReferenceT = std::function<MethodReferenceReturn(LocalContext &)>;
 
-ExpressionT parseMethodCall(TokenPair &token);
+using IdentifierFuncT = std::variant<ExpressionT, MethodReferenceT>;
+using IdentifierFuncResult = std::variant<ValueOrRef, MethodReferenceReturn>;
+
+struct LateIdentifierResult {
+    ValueOrRef vor; // Only filled if result is value type
+    IdentifierFuncT f;
+};
+
+using LateIdentifierFunc = std::function<LateIdentifierResult(LocalContext &)>;
+
+ExpressionT parseMethodCall(TokenPair &token, IdentifierFuncT &base);
+
 std::vector<ExpressionT> parseList(TokenPair &token);
+
 FunctionArgumentValues evaluateArgumentList(
     const std::vector<ExpressionT> &args,
     const FunctionArguments &functionArgs,
@@ -221,139 +253,190 @@ FunctionArguments parseDeclarationArguments(TokenPair &token) {
     return args;
 }
 
-IdentifierFuncT parseMemberAccessor(TokenPair &token,
-                                    IdentifierFuncT base,
-                                    Type type) {
-    token.next();
-
-    auto assertMemberIndex = [&token](int i) {
-        if (i == -1) {
-            throw VBParsingError{token.lastLoc,
-                                 "cannot find member " + token.content()};
-        }
-    };
-
-    if (type.type == Type::Struct) {
-        auto memberIndex = type.classType->getVariableIndex(token.content());
-        assertMemberIndex(memberIndex);
-        token.next();
-        return [base, memberIndex](LocalContext &context) -> ValueOrRef {
-            auto &baseVar = base(context).get();
-            if (baseVar.value.index() != Type::Struct) {
-                throw VBRuntimeError(
-                    "trying to access member of non member type line " +
-                    std::to_string(context.line));
-            }
-            auto &s = baseVar.get<StructT>();
-
-            return &s->get(memberIndex);
-        };
-    }
-    else if (type.type == Type::Class) {
-        auto name = token.content();
-
-        auto argExpr = parseList(token);
-
-        if (auto f = type.classType->module->function(name)) {
-            return [base, f, argExpr](LocalContext &context) -> ValueOrRef {
-                //  TODO: Add arguments
-                auto args =
-                    evaluateArgumentList(argExpr, f->arguments(), context);
-                return f->call(args, context);
-            };
-        }
-
-        auto memberIndex = type.classType->getVariableIndex(name);
-        assertMemberIndex(memberIndex);
-
-        // TODO: Handle when there is circular dependencies and the class
-        // is unknown on parse time
-
-        token.next();
-        return [base, memberIndex](LocalContext &context) -> ValueOrRef {
-            auto &baseVar = base(context).get();
-            if (baseVar.value.index() != Type::Class) {
-                throw VBRuntimeError(
-                    "trying to access member of non member type line " +
-                    std::to_string(context.line));
-            }
-            auto &s = baseVar.get<ClassT>();
-
-            return s->get(memberIndex);
-        };
+const ExpressionT &toExpr(const IdentifierFuncT &i,
+                          const LocalContext &context) {
+    if (i.index() == 0) {
+        return std::get<ExpressionT>(i);
     }
 
-    // TODO: Implement class accessor
-
-    throw VBParsingError{
-        token.lastLoc,
-        "cannot access member of non object (ie not struct or class)"};
+    throw VBRuntimeError{context.currentLocation(),
+                         "trying to access non-variable as variable"};
 }
 
-IdentifierFuncT parseIdentifier(TokenPair &token) {
+IdentifierFuncResult evaluateIdentifier(const IdentifierFuncT &i,
+                                        LocalContext &context) {
+    if (i.index() == 0) {
+        return {std::get<0>(i)(context)};
+    }
+    else if (i.index() == 0) {
+        return {std::get<1>(i)(context)};
+    }
+
+    throw VBInternalParsingError{{}, "failed to evaluate identifier"};
+}
+
+// LateIdentifierFunc lateMemberAccessor(TokenPair &token, IdentifierFuncT base)
+// {
+// }
+
+LateIdentifierFunc parseMemberAccessor(TokenPair &token, IdentifierFuncT base) {
+    token.next();
+
+    auto name = token.content();
+    token.next();
+
+    // We dont know know type at parsing time. The second best is to look up
+    // names the first time a command is run
+    return [&base, name, loc = token.lastLoc](
+               LocalContext &context) -> LateIdentifierResult {
+        auto res = LateIdentifierResult{
+            .vor = toExpr(base, context)(context),
+        };
+
+        auto type = res.vor.get().type();
+
+        if (type.type == Type::Struct) {
+            auto memberIndex = type.classType->getVariableIndex(name);
+
+            if (memberIndex == -1) {
+                throw VBParsingError{loc, "cannot find member " + name};
+            }
+            res.f = [base, memberIndex](LocalContext &context) -> ValueOrRef {
+                auto &baseVar = toExpr(base, context)(context).get();
+                if (baseVar.value.index() != Type::Struct) {
+                    throw VBRuntimeError(
+                        "trying to access member of non member type line " +
+                        std::to_string(context.line));
+                }
+                auto &s = baseVar.get<StructT>();
+
+                return &s->get(memberIndex);
+            };
+            return res;
+        }
+        else if (type.type == Type::Class) {
+
+            auto memberIndex = type.classType->getVariableIndex(name);
+            if (memberIndex == -1) {
+                throw VBParsingError{loc, "cannot find member " + name};
+            }
+
+            // TODO: Handle when there is circular dependencies and the class
+            // is unknown on parse time
+            res.f = [base, memberIndex](LocalContext &context) -> ValueOrRef {
+                auto &baseVar = toExpr(base, context)(context).get();
+                if (baseVar.value.index() != Type::Class) {
+                    throw VBRuntimeError(
+                        "trying to access member of non member type line " +
+                        std::to_string(context.line));
+                }
+                auto &s = baseVar.get<ClassT>();
+
+                return s->get(memberIndex);
+            };
+            return res;
+        }
+
+        throw VBParsingError{
+            loc, "cannot access member of non object (ie not struct or class)"};
+    };
+
+    //    return lateMemberAccessor(token, base);
+
+    // TODO: Implement class accessor
+}
+
+LateIdentifierFunc parseIdentifier(TokenPair &token) {
     auto loc = token.first->loc;
     auto name = token.first->content;
 
     token.next();
 
-    auto expr = IdentifierFuncT{};
+    auto getVarOrFunction = LateIdentifierFunc{};
 
-    auto type = Type{};
+    auto simpleExpr = ExpressionT{};
 
+    // These first will be known att parse time
     if (auto index = token.localVariable(name); index != -1) {
-        type = token.currentFunctionBody->variable(index);
-        expr = [index](LocalContext &context) -> Value & {
+        simpleExpr = [index](LocalContext &context) -> ValueOrRef {
             return context.localVariables.at(index);
         };
     }
     else if (auto index = token.argument(name); index != -1) {
-        //        type = token.namedArguments.at(index).second;
-        expr = [index](LocalContext &context) -> Value & {
-            return context.args.at(index).get();
+        simpleExpr = [index](LocalContext &context) -> ValueOrRef {
+            return &context.args.at(index).get();
         };
     }
     else if (auto index = token.currentModule->staticVariable(name);
              index != -1) {
-        //        type =
-        //        token.currentModule->staticVariables.at(index).second.type();
-        expr = [index](LocalContext &context) -> Value & {
-            return context.module->staticVariables.at(index).second;
+        simpleExpr = [index](LocalContext &context) -> ValueOrRef {
+            return &context.module->staticVariables.at(index).second;
         };
     }
-    //    else if (token.currentModule->type() == ModuleType::Class) {
-    //        if (auto index =
-    //        token.currentModule->classType->getVariableIndex(name);
-    //            index != -1) {
-    //            auto &var =
-    //            token.currentModule->classType->variables.at(index);
-    //            //            auto type = var.type;
-    //            expr = [index](LocalContext &context) -> Value & {
-    //                // TODO: Maybe self/me argument should be handled
-    //                // differently...?
-    //                auto &me = context.args.at(0).get();
-    //                if (!me.isClass()) {
-    //                    throw VBRuntimeError{context.currentLocation(),
-    //                                         "Trying to call method on non
-    //                                         class"};
-    //                }
-    //                return me.get<ClassT>()->get(index);
-    //            };
-    //        }
-    //    }
-    else if (auto f = token.currentModule->function(name)) {
-        expr = [f = parseMethodCall(token)](
-                   LocalContext &context) -> ValueOrRef { return f(context); };
+    else if (token.currentModule->type() == ModuleType::Class) {
+        if (auto index = token.currentModule->classType->getVariableIndex(name);
+            index != -1) {
+            simpleExpr = [index](LocalContext &context) -> ValueOrRef {
+                // TODO: Maybe self/me argument should be handled
+                // differently...?
+                auto &me = context.args.at(0).get();
+                if (!me.isClass()) {
+                    throw VBInternalParsingError{
+                        context.currentLocation(),
+                        "Trying to call method on non class "};
+                }
+                return &me.get<ClassT>()->get(index);
+            };
+        }
+    }
+    else if (auto f = token.function(name)) {
+        auto base = IdentifierFuncT{};
+
+        simpleExpr = [f = parseMethodCall(token, base)](
+                         LocalContext &context) -> ValueOrRef {
+            return f(context);
+        };
     }
 
-    if (!expr) {
-        throw VBParsingError{loc, "could not find variable " + name};
+    if (simpleExpr) {
+        getVarOrFunction =
+            [simpleExpr](LocalContext &context) -> LateIdentifierResult {
+            return LateIdentifierResult{
+                .vor = simpleExpr(context),
+                .f = simpleExpr,
+            };
+        };
     }
 
-    if (token.content() != ".") {
-        return expr;
+    if (!getVarOrFunction) {
+        throw VBParsingError{loc, "could not find variable or method " + name};
     }
 
-    return parseMemberAccessor(token, expr, type);
+    else if (token.content() == ".") {
+
+        // Return a function that either connection to right function and then
+        // evaluate or just evaluate
+        auto baseIdentifierExpr =
+            [getVarOrFunction, cachedIdentifierFunc = IdentifierFuncT{}](
+                LocalContext &context) mutable -> ValueOrRef {
+            if (cachedIdentifierFunc.index() ==
+                0) { // Empty result will have index 0
+                if (!std::get<0>(cachedIdentifierFunc)) {
+                    auto identifier = getVarOrFunction(context);
+                    cachedIdentifierFunc = identifier.f;
+                    return identifier.vor;
+                }
+
+                return std::get<0>(cachedIdentifierFunc)(context);
+            }
+
+            throw VBInternalParsingError(context.currentLocation(),
+                                         "identifier function");
+        };
+
+        getVarOrFunction = parseMemberAccessor(token, baseIdentifierExpr);
+    }
+    return getVarOrFunction;
 }
 
 ExpressionT parseNew(TokenPair &token) {
@@ -399,9 +482,15 @@ ExpressionT parseExpression(TokenPair &token) {
         break;
 
     case Token::Word: {
-        auto id = parseIdentifier(token);
-        expr = [id](LocalContext &context) -> ValueOrRef {
-            return id(context); //
+        auto idFunction = parseIdentifier(token);
+        expr = [idFunction, f = ExpressionT{}](
+                   LocalContext &context) mutable -> ValueOrRef {
+            if (!f) {
+                auto res = idFunction(context);
+                f = std::get<ExpressionT>(res.f);
+            }
+
+            return f(context); //
         };
     } break;
 
@@ -489,7 +578,7 @@ FunctionArgumentValues evaluateArgumentList(
     return values;
 }
 
-ExpressionT parseMethodCall(TokenPair &token) {
+ExpressionT parseMethodCall(TokenPair &token, IdentifierFuncT &base) {
     auto methodName = token.first->content;
 
     token.next();
@@ -560,9 +649,9 @@ void parseMemberDeclaration(TokenPair &token) {
 
     auto type = parseAsStatement(token);
 
-    // TODO: Handle differences between class and modules where modules always
-    // have global/static variables and classes as standard have nonstatic
-    // variables
+    // TODO: Handle differences between class and modules where modules
+    // always have global/static variables and classes as standard have
+    // nonstatic variables
     if (token.currentModule->type() == ModuleType::Class) {
         auto classType = token.currentModule->classType.get();
 
@@ -580,8 +669,7 @@ void parseMemberDeclarationList(TokenPair &token) {
     // TODO: Loop for all declarations on line
 }
 
-FunctionBody::CommandT parseAssignment(TokenPair &token,
-                                       IdentifierFuncT target) {
+FunctionBody::CommandT parseAssignment(TokenPair &token, ExpressionT target) {
     auto loc = token.first->loc;
     token.next();
 
@@ -594,10 +682,13 @@ FunctionBody::CommandT parseAssignment(TokenPair &token,
     return [target, expr](LocalContext &context) {
         target(context) = expr(context).get();
     };
+    //    return [target, expr](LocalContext &context) {
+    //        toExpr(target, context)(context) = expr(context).get();
+    //    };
 }
 
-//! A command is a line inside a function that starts at the beginning of the
-//! line
+//! A command is a line inside a function that starts at the beginning of
+//! the line
 FunctionBody::CommandT parseCommand(TokenPair &token) {
     switch (token.first->type()) {
     case Token::Print: {
@@ -622,7 +713,40 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         {
             auto identifier = parseIdentifier(token);
             if (token.content() == "=") {
-                return parseAssignment(token, identifier);
+                auto expr = [identifier, f = ExpressionT{}](
+                                LocalContext &context) mutable -> ValueOrRef {
+                    if (!f) {
+                        auto res = identifier(context);
+                        f = std::get<0>(res.f);
+                        return res.vor;
+                    }
+
+                    return f(context);
+                };
+
+                return parseAssignment(token, expr);
+            }
+            else if (auto t = token.type();
+                     t == Token::Word || t == Token::NumberLiteral) {
+                // Method calls
+                // For example
+                // ExampleMethod "Hello"
+
+                auto argExpr = parseList(token);
+                auto expr = [identifier, f = MethodReferenceReturn{}, argExpr](
+                                LocalContext &context) mutable -> ValueOrRef {
+                    if (!f) {
+                        auto res = identifier(context);
+                        f = std::get<1>(res.f)(context);
+                    }
+
+                    auto classFunction = f.classType->function(f.function);
+
+                    return classFunction->call(
+                        evaluateArgumentList(
+                            argExpr, classFunction->arguments(), context),
+                        context);
+                };
             }
             else {
                 throw VBParsingError{*token.first,

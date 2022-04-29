@@ -37,5 +37,8 @@ public:
         return -1;
     }
 
+    Function *function(std::string_view name);
+    Function *function(int i);
+
     friend class ClassInstance;
 };
