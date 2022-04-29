@@ -7,6 +7,8 @@ End Structure
 Sub Test(A as Apa)
 	Assert A.X
 	Assert A.Y
+
+	A.X = 0
 End Sub
 
 Sub Main()
@@ -16,5 +18,4 @@ Sub Main()
 	A.Y = 30
 
 	Test A
-
 End Sub

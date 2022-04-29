@@ -11,7 +11,7 @@
 struct FunctionArgument {
     Type type;
     std::string name;
-    bool isRef = true;
+    bool isByRef = true;
 };
 
 struct FunctionArguments : public std::vector<FunctionArgument> {};
@@ -36,5 +36,9 @@ public:
 
     std::string_view name() {
         return _name;
+    }
+
+    const FunctionArguments &arguments() const {
+        return _arguments;
     }
 };

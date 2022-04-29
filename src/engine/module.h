@@ -2,6 +2,7 @@
 
 #include "classtype.h"
 #include "function.h"
+#include <filesystem>
 
 enum class ModuleType {
     Module,
@@ -13,6 +14,7 @@ struct Module {
     std::vector<std::pair<std::string, Type>> variables;
     std::vector<std::pair<std::string, Value>> staticVariables;
     std::vector<std::pair<std::string, ClassType>> classes;
+    std::filesystem::path path;
 
     ModuleType type = ModuleType::Module;
 

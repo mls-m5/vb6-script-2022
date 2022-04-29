@@ -1,4 +1,5 @@
 #pragma once
+#include "Location.h"
 #include "context.h"
 #include "function.h"
 #include <vector>
@@ -8,17 +9,18 @@ public:
     using CommandT = std::function<void(LocalContext &)>;
 
 private:
-    std::vector<Type> localVariables;
-    std::vector<CommandT> commands;
+    std::vector<Type> _localVariables;
+    std::vector<CommandT> _commands;
+    std::vector<size_t> _line;
 
-    Value returnValue;
+    Value _returnValue;
 
 public:
     Type variable(int i);
 
     void pushLocalVariable(Type t);
 
-    void pushCommand(const CommandT &t);
+    void pushCommand(const CommandT &t, size_t line);
 
     Value call(const FunctionArgumentValues &values,
                LocalContext &context) const;

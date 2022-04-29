@@ -123,6 +123,8 @@ Type parseAsStatement(TokenPair &token) {
     throw VBParsingError{token.lastLoc, "No such type: " + token.content()};
 }
 
+//! For example
+//! Sub Hello(There As String, ByRef You as Integer, Optional ByVal Ref)
 FunctionArguments parseArguments(TokenPair &token) {
     if (!token || token.first->content != "(") {
         throw VBParsingError{token.lastLoc,
@@ -131,7 +133,8 @@ FunctionArguments parseArguments(TokenPair &token) {
 
     auto args = FunctionArguments{};
 
-    // TODO: Handle ByRef and ByVal
+    // TODO: Handle Optional
+    // https://docs.microsoft.com/en-us/dotnet/visual-basic/programming-guide/language-features/procedures/optional-parameters
 
     token.next();
 
@@ -140,13 +143,29 @@ FunctionArguments parseArguments(TokenPair &token) {
             return args;
         }
 
+        bool byVal = false;
+
+        if (token.type() == Token::ByVal) {
+            byVal = true;
+            token.next();
+        }
+        else if (token.type() == Token::ByRef) {
+            // Vb6 default
+            token.next();
+        }
+
         auto name = token.content();
+
         token.next();
 
-        auto type = (token.type() == Token::As) ? parseAsStatement(token)
-                                                : Type{Type::Integer};
+        if (token.type() != Token::As) {
+            throw VBParsingError{token.lastLoc,
+                                 "Expected 'As', got " + token.content()};
+        }
 
-        args.push_back({type, name});
+        auto type = parseAsStatement(token);
+
+        args.push_back({type, name, !byVal});
         token.namedArguments.push_back({name, type});
 
         if (token.content() == ",") {
@@ -303,15 +322,29 @@ Function *lookupFunction(std::string_view name, LocalContext &context) {
         "trying to lookup function on context without active module"};
 };
 
+//! Evaluate function arguments in runtime
+//! @arg functionArgs is used to get information about for example ByVal
 FunctionArgumentValues evaluateArgumentList(
-    const std::vector<ExpressionT> &args, LocalContext &context) {
+    const std::vector<ExpressionT> &args,
+    const FunctionArguments &functionArgs,
+    LocalContext &context) {
     auto values = FunctionArgumentValues{};
     values.reserve(args.size());
 
-    for (auto &arg : args) {
+    // TODO: Handle ByVal here
+
+    for (size_t i = 0; i < args.size(); ++i) {
+        //    for (auto &arg : args) {
+        auto &arg = args.at(i);
+        auto &funcArg = functionArgs.at(i);
         // TODO: Handle references
 
-        values.push_back(ValueOrRef{arg(context)});
+        if (funcArg.isByRef) {
+            values.push_back(arg(context));
+        }
+        else {
+            values.push_back(ValueOrRef{arg(context).get()});
+        }
     }
 
     return values;
@@ -325,17 +358,23 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token) {
 
     return [methodName,
             argExpressionList,
-            function = static_cast<Function *>(nullptr)](
-               LocalContext &context) mutable {
+            function = static_cast<Function *>(nullptr),
+            loc = token.lastLoc](LocalContext &context) mutable {
         if (!function) {
             function = lookupFunction(methodName, context);
+            if (!function) {
+                VBRuntimeError{"could not find function " + methodName};
+            }
+            else {
+                if (argExpressionList.size() > function->arguments().size()) {
+                    VBParsingError{
+                        loc, "to many argument for function " + methodName};
+                }
+            }
         }
 
-        if (!function) {
-            VBRuntimeError{"could not find function " + methodName};
-        }
-
-        auto args = evaluateArgumentList(argExpressionList, context);
+        auto args = evaluateArgumentList(
+            argExpressionList, function->arguments(), context);
 
         function->call(args, context);
     };
@@ -514,7 +553,7 @@ std::unique_ptr<Function> parseFunction(Line *line,
         if (keyWord == Token::End) {
             break;
         }
-        body->pushCommand(parseCommand(token));
+        body->pushCommand(parseCommand(token), token.lastLoc.line);
     }
 
     Function::FuncT f = [body](const FunctionArgumentValues &args,
@@ -529,8 +568,12 @@ std::unique_ptr<Function> parseFunction(Line *line,
     return function;
 }
 
-Module parseGlobal(Line *line, NextTokenT nextToken, NextLineT nextLine) {
+Module parseGlobal(Line *line,
+                   NextTokenT nextToken,
+                   NextLineT nextLine,
+                   std::filesystem::path path) {
     auto module = Module{};
+    module.path = path;
 
     Scope currentScope;
 
@@ -634,7 +677,7 @@ Module parse(std::istream &stream, std::filesystem::path path) {
         };
     };
 
-    return parseGlobal(line, nextToken, nextLine);
+    return parseGlobal(line, nextToken, nextLine, path);
 }
 
 Module loadModule(std::filesystem::path path) {

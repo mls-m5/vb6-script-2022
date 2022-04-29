@@ -43,9 +43,11 @@ TEST_CASE("basic function call") {
 TEST_CASE("basic function body") {
     auto body = FunctionBody{};
 
-    body.pushCommand([](LocalContext &context) {
-        context.returnValue = IntegerT{20}; //
-    });
+    body.pushCommand(
+        [](LocalContext &context) {
+            context.returnValue = IntegerT{20}; //
+        },
+        0);
 
     auto globalContext = GlobalContext{};
     auto dummyContext = LocalContext{globalContext};

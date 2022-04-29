@@ -1,16 +1,11 @@
 #pragma once
 
+#include "Location.h"
+#include "keywordlist.h"
 #include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "keywordlist.h"
-
-struct Location {
-    size_t line = 0;
-    std::shared_ptr<std::filesystem::path> path;
-};
 
 struct Token {
 #define TOKEN_KEYWORD(x) x,

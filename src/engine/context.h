@@ -28,6 +28,8 @@ struct LocalContext {
     FunctionArgumentValues args;
     Value returnValue; // For functions: return value
     Module *module = nullptr;
+    const class FunctionBody *functionBody = nullptr;
+    size_t line = 0;
 
     LocalContext(GlobalContext &globalContext,
                  const std::vector<Type> vars = {},
