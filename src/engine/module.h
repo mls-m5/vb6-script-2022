@@ -10,16 +10,29 @@ enum class ModuleType {
 };
 
 struct Module {
+    Module() = default;
+    Module(const Module &) = delete;
+    Module &operator=(const Module &) = delete;
+    ~Module() = default;
+
     std::vector<std::shared_ptr<Function>> functions;
-    std::vector<std::pair<std::string, Type>> variables;
+    //    std::vector<std::pair<std::string, Type>> variables;
     std::vector<std::pair<std::string, Value>> staticVariables;
     std::vector<std::pair<std::string, ClassType>> classes;
     std::filesystem::path path;
 
-    ModuleType type = ModuleType::Module;
+    std::unique_ptr<ClassType> classType;
+
+    ModuleType type() {
+        return classType ? ModuleType::Class : ModuleType::Module;
+    }
 
     void addFunction(std::shared_ptr<Function> function) {
         functions.push_back(std::move(function));
+    }
+
+    std::string name() {
+        return path.stem();
     }
 
     Function *function(std::string_view name) const {

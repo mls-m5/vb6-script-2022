@@ -32,6 +32,7 @@ struct TokenPair {
     Token *second = nullptr;
 
     Module *currentModule = nullptr;
+    std::vector<std::shared_ptr<Module>> modules;
 
     FunctionBody *currentFunctionBody = nullptr;
     std::vector<std::string> namedLocalVariables;
@@ -77,11 +78,37 @@ struct TokenPair {
     }
 
     std::string content() const {
-        return first ? first->content : "";
+        return first ? first->content : "End of file";
     }
 
     Token::Keyword type() const {
         return first ? first->type() : Token::Empty;
+    }
+
+    ClassType *structType(std::string_view name) const {
+        if (currentModule) {
+            if (auto t = currentModule->structType(name)) {
+                return t;
+            }
+        }
+
+        for (auto &m : modules) {
+            if (auto t = m->structType(name)) {
+                return t;
+            }
+        }
+
+        return nullptr;
+    }
+
+    ClassType *classType(std::string_view name) const {
+        for (auto &m : modules) {
+            if (m->type() == ModuleType::Class && m->name() == name) {
+                return m->classType.get();
+            }
+        }
+
+        return nullptr;
     }
 };
 
@@ -120,11 +147,14 @@ Type parseAsStatement(TokenPair &token) {
     }
 
     // Todo: Make sure to check types in other modules aswell
-    auto structType = token.currentModule->structType(token.content());
-
-    if (structType) {
+    if (auto structType = token.structType(token.content())) {
         token.next();
         return Type{Type::Struct, structType};
+    }
+
+    if (auto classType = token.classType(token.content())) {
+        token.next();
+        return Type{Type::Class, classType};
     }
 
     throw VBParsingError{token.lastLoc, "No such type: " + token.content()};
@@ -189,8 +219,16 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token,
                                     Type type) {
     token.next();
 
+    auto assertMemberIndex = [&token](int i) {
+        if (i == -1) {
+            throw VBParsingError{token.lastLoc,
+                                 "cannot find member " + token.content()};
+        }
+    };
+
     if (type.type == Type::Struct) {
         auto memberIndex = type.classType->getVariableIndex(token.content());
+        assertMemberIndex(memberIndex);
         token.next();
         return [base, memberIndex](LocalContext &context) -> Value & {
             auto &baseVar = base(context);
@@ -200,6 +238,26 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token,
                     std::to_string(context.line));
             }
             auto &s = baseVar.get<StructT>();
+
+            return s->get(memberIndex);
+        };
+    }
+    else if (type.type == Type::Class) {
+        auto memberIndex = type.classType->getVariableIndex(token.content());
+        assertMemberIndex(memberIndex);
+
+        // TODO: Handle when there is circular dependencies and the class
+        // is unknown on parse time
+
+        token.next();
+        return [base, memberIndex](LocalContext &context) -> Value & {
+            auto &baseVar = base(context);
+            if (baseVar.value.index() != Type::Class) {
+                throw VBRuntimeError(
+                    "trying to access member of non member type line " +
+                    std::to_string(context.line));
+            }
+            auto &s = baseVar.get<ClassT>();
 
             return s->get(memberIndex);
         };
@@ -253,6 +311,26 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
     return parseMemberAccessor(token, expr, type);
 }
 
+ExpressionT parseNew(TokenPair &token) {
+    token.next();
+
+    if (token.type() != Token::Word) {
+        VBParsingError{token.lastLoc,
+                       "Expected classname, got other expression: " +
+                           token.content()};
+    }
+
+    auto name = token.content();
+
+    auto classType = token.classType(name);
+
+    token.next();
+
+    return [classType](LocalContext) -> ValueOrRef {
+        return {Value{ClassInstance::create(classType)}};
+    };
+}
+
 ExpressionT parseExpression(TokenPair &token) {
     auto keyword = token.first->type();
 
@@ -277,9 +355,13 @@ ExpressionT parseExpression(TokenPair &token) {
             return ValueOrRef{&id(context)}; //
         };
     } break;
+
+    case Token::New:
+        expr = parseNew(token);
+        break;
     default:
-        throw VBParsingError{*token.first,
-                             "unexpected token " + token.first->content};
+        throw VBParsingError{token.lastLoc,
+                             "unexpected token " + token.content()};
     };
 
     if (!expr) {
@@ -397,17 +479,18 @@ void parseLocalVariableDeclaration(TokenPair &token) {
 
     auto name = token.first->content;
 
-    token.namedLocalVariables.push_back(name);
-
     token.next();
 
-    if (token && token.type() == Token::As) {
-        auto type = parseAsStatement(token);
-        token.currentFunctionBody->pushLocalVariable(type);
+    if (!(token && token.type() == Token::As)) {
+        throw VBParsingError{token.lastLoc,
+                             "Expected 'As' statement got " + token.content()};
     }
-    else {
-        token.currentFunctionBody->pushLocalVariable({Type::Integer});
-    }
+
+    auto type = parseAsStatement(token);
+
+    token.namedLocalVariables.push_back(name);
+
+    token.currentFunctionBody->pushLocalVariable(type);
 }
 
 void parseMemberDeclaration(TokenPair &token) {
@@ -420,28 +503,32 @@ void parseMemberDeclaration(TokenPair &token) {
     auto name = token.content();
 
     token.next();
+    if (token.type() != Token::As) {
+
+        throw VBParsingError{token.lastLoc,
+                             "Expected 'As' statement got " + token.content()};
+    }
+
+    auto type = parseAsStatement(token);
 
     // TODO: Handle differences between class and modules where modules always
     // have global/static variables and classes as standard have nonstatic
     // variables
-    if (false) {
-        if (token && token.type() == Token::As) {
-            token.currentModule->variables.push_back(
-                {name, parseAsStatement(token)});
-        }
+    if (token.currentModule->type() == ModuleType::Class) {
+        auto classType = token.currentModule->classType.get();
+
+        classType->addAddVariable(name, type);
     }
     else {
-        if (token && token.type() == Token::As) {
-            token.currentModule->staticVariables.push_back(
-                {name, Value::create(parseAsStatement(token))});
-        }
+        token.currentModule->staticVariables.push_back(
+            {name, Value::create(type)});
     }
 }
 
 void parseMemberDeclarationList(TokenPair &token) {
     parseMemberDeclaration(token);
 
-    // TODO: Loop for all declarations
+    // TODO: Loop for all declarations on line
 }
 
 FunctionBody::CommandT parseAssignment(TokenPair &token,
@@ -583,9 +670,15 @@ std::unique_ptr<Function> parseFunction(Line *line,
 std::unique_ptr<Module> parseGlobal(Line *line,
                                     NextTokenT nextToken,
                                     NextLineT nextLine,
-                                    std::filesystem::path path) {
+                                    std::filesystem::path path,
+                                    const ModuleList &moduleList) {
     auto module = std::make_unique<Module>();
     module->path = path;
+    if (path.extension() == ".cls") {
+        module->classType = std::make_unique<ClassType>();
+        module->classType->module = module.get();
+        module->classType->name = path.stem();
+    }
 
     Scope currentScope;
 
@@ -595,6 +688,7 @@ std::unique_ptr<Module> parseGlobal(Line *line,
         token.f = nextToken;
         token.currentModule = module.get();
         token.next();
+        token.modules = moduleList; // Copy on every line... :)
 
         if (!token.first) {
             continue;
@@ -655,7 +749,8 @@ std::unique_ptr<Module> parseGlobal(Line *line,
 } // namespace
 
 std::unique_ptr<Module> parse(std::istream &stream,
-                              std::filesystem::path path) {
+                              std::filesystem::path path,
+                              const ModuleList &moduleList) {
 
     auto f = CodeFile{stream, path};
 
@@ -691,10 +786,11 @@ std::unique_ptr<Module> parse(std::istream &stream,
         };
     };
 
-    return parseGlobal(line, nextToken, nextLine, path);
+    return parseGlobal(line, nextToken, nextLine, path, moduleList);
 }
 
-std::unique_ptr<Module> loadModule(std::filesystem::path path) {
+std::unique_ptr<Module> loadModule(std::filesystem::path path,
+                                   const ModuleList &moduleList) {
     auto file = std::ifstream{path};
-    return parse(file, path);
+    return parse(file, path, moduleList);
 }

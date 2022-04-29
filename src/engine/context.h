@@ -5,8 +5,11 @@
 #include <map>
 #include <vector>
 
+struct ModuleList : std::vector<std::shared_ptr<class Module>> {};
+
 struct GlobalContext {
-    std::vector<std::shared_ptr<class Module>> modules;
+    ModuleList modules;
+
     //    std::map<std::string, Value> globalVariables;
 
     //    void set(const std::string &name, Value value) {

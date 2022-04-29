@@ -5,6 +5,26 @@
 #include "parser.h"
 #include "testcontext.h"
 #include <filesystem>
+#include <fstream>
+
+// Add possibility to load class files associated with module files
+std::vector<std::filesystem::path> parseImports(std::filesystem::path path) {
+    auto list = std::vector<std::filesystem::path>{};
+    auto file = std::ifstream{path};
+
+    auto str = std::string_view{"' TestImport "};
+    for (std::string line; std::getline(file, line);) {
+        if (line.rfind(str) == 0) {
+            auto name = line.substr(str.size());
+            list.push_back("scripts/" + name + ".cls");
+        }
+        else {
+            break;
+        }
+    }
+
+    return list;
+}
 
 TEST_SUIT_BEGIN;
 
@@ -37,7 +57,16 @@ for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
                                              innerAssert]() -> void {
         std::cout << path << std::endl;
 
-        auto module = loadModule(path);
+        auto context = TestContext{nullptr};
+
+        auto imports = parseImports(path);
+
+        for (auto &import : imports) {
+            context.global.modules.push_back(
+                loadModule(import, context.global.modules));
+        }
+
+        auto module = loadModule(path, context.global.modules);
 
         module->addFunction(std::make_unique<Function>(
             "Assert",
@@ -47,7 +76,7 @@ for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
             }},
             innerAssert));
 
-        auto context = TestContext{module.get()};
+        context.local.module = module.get();
 
         module->function("Main")->call({}, context.local);
     };
