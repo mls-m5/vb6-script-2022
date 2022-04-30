@@ -349,23 +349,26 @@ ExpressionT parseNew(TokenPair &token) {
 }
 
 ExpressionT parseExpression(TokenPair &token) {
-    auto keyword = token.first->type();
+    auto keyword = token.type();
 
     ExpressionT expr;
 
+    auto name = token.content();
+
     switch (keyword) {
     case Token::StringLiteral:
-        expr = [str = token.first->content](LocalContext &) {
-            return ValueOrRef{{str}};
-        };
+        token.next();
+        expr = [name](LocalContext &) { return ValueOrRef{std::string{name}}; };
         break;
     case Token::NumberLiteral:
-        expr = [l = std::stol(token.first->content)](LocalContext &) {
+        token.next();
+        expr = [l = std::stol(name)](LocalContext &) {
             return ValueOrRef{{LongT{l}}};
         };
         break;
     case Token::FloatLiteral:
-        expr = [i = std::stod(token.first->content)](LocalContext &) {
+        token.next();
+        expr = [i = std::stod(name)](LocalContext &) {
             return ValueOrRef{{DoubleT{i}}};
         };
         break;
@@ -389,8 +392,6 @@ ExpressionT parseExpression(TokenPair &token) {
     if (!expr) {
         throw VBParsingError{*token.first, "failied to parse expression"};
     }
-
-    token.next();
 
     if (!token.first) {
         return expr;
@@ -464,9 +465,6 @@ FunctionArgumentValues evaluateArgumentList(
 
 FunctionBody::CommandT parseMethodCall(TokenPair &token,
                                        ExpressionT functionExpression) {
-    //    auto methodName = token.first->content;
-
-    //    token.next();
     auto argExpressionList = parseList(token);
 
     assertEmpty(token);
