@@ -227,62 +227,48 @@ FunctionArguments parseArguments(TokenPair &token) {
     return args;
 }
 
-IdentifierFuncT parseMemberAccessor(TokenPair &token,
-                                    IdentifierFuncT base,
-                                    Type type) {
+IdentifierFuncT parseMemberAccessor(TokenPair &token, IdentifierFuncT base) {
     token.next();
 
-    auto assertMemberIndex = [&token](int i) {
-        if (i == -1) {
-            throw VBParsingError{token.lastLoc,
-                                 "cannot find member " + token.content()};
-        }
-    };
-
     auto name = token.content();
+    auto loc = token.lastLoc;
+    token.next();
 
-    if (type.type == Type::Struct) {
+    return [base, name, loc](LocalContext &context) -> ValueOrRef {
+        auto assertMemberIndex = [&name, &context](int i) {
+            if (i == -1) {
+                throw VBParsingError{context.currentLocation(),
+                                     "cannot find member " + name};
+            }
+        };
+        // #error "continue here"
+        //         // TODO: Continue
+
+        // TODO: cache member index
+        // TODO: handle Object type (when that is added)
+        auto baseVar = base(context);
+        auto type = baseVar->type();
+
+        if (!type.classType) {
+            throw VBParsingError{
+                loc,
+                "cannot access member of non object (ie not struct or class)"};
+        }
+
         auto memberIndex = type.classType->getVariableIndex(name);
         assertMemberIndex(memberIndex);
-        token.next();
-        return [base, memberIndex](LocalContext &context) -> ValueOrRef {
-            auto baseVar = base(context);
-            if (baseVar->value.index() != Type::Struct) {
-                throw VBRuntimeError(
-                    "trying to access member of non struct type line " +
-                    std::to_string(context.line));
-            }
+        if (type.type == Type::Struct) {
             auto &s = baseVar->get<StructT>();
-
             return {&s->get(memberIndex)};
-        };
-    }
-    else if (type.type == Type::Class) {
-        auto memberIndex = type.classType->getVariableIndex(name);
-        assertMemberIndex(memberIndex);
-
-        // TODO: Handle when there is circular dependencies and the class
-        // is unknown on parse time
-
-        token.next();
-        return [base, memberIndex](LocalContext &context) -> ValueOrRef {
-            auto baseVar = base(context);
-            if (baseVar->value.index() != Type::Class) {
-                throw VBRuntimeError(
-                    "trying to access member of non member type line " +
-                    std::to_string(context.line));
-            }
+        }
+        else if (type.type == Type::Class) {
             auto &s = baseVar->get<ClassT>();
-
             return {&s->get(memberIndex)};
-        };
-    }
+        }
 
-    // TODO: Implement class accessor
-
-    throw VBParsingError{
-        token.lastLoc,
-        "cannot access member of non object (ie not struct or class)"};
+        throw VBParsingError{
+            loc, "cannot access member of non object (ie not struct or class)"};
+    };
 }
 
 IdentifierFuncT parseIdentifier(TokenPair &token) {
@@ -323,7 +309,7 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
     }
 
     // TODO: Remove Parse time type here
-    return parseMemberAccessor(token, expr, Type{Type::Integer});
+    return parseMemberAccessor(token, expr);
 }
 
 ExpressionT parseNew(TokenPair &token) {
