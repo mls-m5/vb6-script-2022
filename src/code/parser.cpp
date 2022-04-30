@@ -293,14 +293,8 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
 
     auto expr = IdentifierFuncT{};
 
-    //    auto type = Type{};
-
     expr = [name](LocalContext &context) -> ValueOrRef {
         // TODO: Implement arguments here
-        //        else if (auto index = token.argument(name); index != -1) {
-        //            auto type = token.namedArguments.at(index).second;
-        //            return {&context.args.at(index).get()};
-        //        }
         if (auto index = context.module->staticVariable(name); index != -1) {
             auto type = context.module->staticVariables.at(index).second.type();
             return {&context.module->staticVariables.at(index).second};

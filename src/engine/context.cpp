@@ -35,8 +35,10 @@ Location LocalContext::currentLocation() const {
 
 const Function *LocalContext::function(std::string_view name) const {
     for (auto &m : globalContext.modules) {
-        return m->function(name);
+        if (auto f = m->function(name)) {
+            return f;
+        }
     }
 
-    return nullptr;
+    return module->function(name);
 }
