@@ -303,11 +303,15 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
             // TODO: Cache function pointer
             return FunctionRef{f};
         }
-        // TODO: Handle multiple arguments
         else if (auto index = context.functionBody->variableIndex(name);
                  index != -1) {
             auto type = context.functionBody->variable(index);
             return {&context.localVariables.at(index)};
+        }
+        else if (auto index =
+                     context.functionBody->function()->argumentIndex(name);
+                 index != -1) {
+            return {&context.args.at(index).get()};
         }
 
         throw VBParsingError{context.currentLocation(),

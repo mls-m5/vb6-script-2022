@@ -41,4 +41,13 @@ public:
     const FunctionArguments &arguments() const {
         return _arguments;
     }
+
+    int argumentIndex(std::string_view name) const {
+        for (size_t i = 0; i < _arguments.size(); ++i) {
+            if (_arguments.at(i).name == name) {
+                return i;
+            }
+        }
+        return -1;
+    }
 };
