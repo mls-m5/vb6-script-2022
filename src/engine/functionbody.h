@@ -17,7 +17,6 @@ private:
     Function *_function;
 
 public:
-    //    Type variable(int i);
     Type variable(int i) const;
 
     int variableIndex(std::string_view name) const;
@@ -27,6 +26,7 @@ public:
     void pushCommand(const CommandT &t, size_t line);
 
     Value call(const FunctionArgumentValues &values,
+               Value me,
                LocalContext &context) const;
 
     void function(Function *function) {

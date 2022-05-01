@@ -6,9 +6,11 @@
 LocalContext::LocalContext(GlobalContext &globalContext,
                            const std::vector<std::pair<std::string, Type>> vars,
                            FunctionArgumentValues args,
-                           Module *module)
+                           Module *module,
+                           Value me)
     : globalContext{globalContext}
-    , module{module} {
+    , module{module}
+    , me{me} {
     localVariables.reserve(vars.size());
     for (auto &var : vars) {
         localVariables.push_back(Value::create(var.second));

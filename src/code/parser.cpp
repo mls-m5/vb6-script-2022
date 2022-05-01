@@ -36,12 +36,12 @@ struct TokenPair {
 
     FunctionBody *currentFunctionBody = nullptr;
     //    std::vector<std::string> namedLocalVariables;
-    std::vector<std::pair<std::string, Type>> namedArguments;
+    //    std::vector<std::pair<std::string, Type>> namedArguments;
 
     void endFunction() {
         currentFunctionBody = nullptr;
         //        namedLocalVariables.clear();
-        namedArguments.clear();
+        //        namedArguments.clear();
     }
 
     int localVariable(std::string_view name) {
@@ -57,15 +57,15 @@ struct TokenPair {
     }
 
     // Get index to argument in current context
-    int argument(std::string_view name) {
-        for (size_t i = 0; i < namedArguments.size(); ++i) {
-            if (namedArguments.at(i).first == name) {
-                return i;
-            }
-        }
+    //    int argument(std::string_view name) {
+    //        for (size_t i = 0; i < namedArguments.size(); ++i) {
+    //            if (namedArguments.at(i).first == name) {
+    //                return i;
+    //            }
+    //        }
 
-        return -1;
-    }
+    //        return -1;
+    //    }
 
     TokenPair &next() {
         std::tie(first, second) = f();
@@ -216,7 +216,7 @@ FunctionArguments parseArguments(TokenPair &token) {
         auto type = parseAsStatement(token);
 
         args.push_back({type, name, !byVal});
-        token.namedArguments.push_back({name, type});
+        //        token.namedArguments.push_back({name, type});
 
         if (token.content() == ",") {
             shouldContinue = true;
@@ -235,17 +235,8 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token, IdentifierFuncT base) {
     token.next();
 
     return [base, name, loc](LocalContext &context) -> ValueOrRef {
-        auto assertMemberIndex = [&name, &context](int i) {
-            if (i == -1) {
-                throw VBParsingError{context.currentLocation(),
-                                     "cannot find member " + name};
-            }
-        };
-        // #error "continue here"
-        //         // TODO: Continue
-
-        // TODO: cache member index
         // TODO: handle Object type (when that is added)
+
         auto baseVar = base(context);
         auto type = baseVar->type();
 
@@ -255,19 +246,30 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token, IdentifierFuncT base) {
                 "cannot access member of non object (ie not struct or class)"};
         }
 
+        // TODO: cache member index
         auto memberIndex = type.classType->getVariableIndex(name);
-        assertMemberIndex(memberIndex);
-        if (type.type == Type::Struct) {
-            auto &s = baseVar->get<StructT>();
-            return {&s->get(memberIndex)};
-        }
-        else if (type.type == Type::Class) {
-            auto &s = baseVar->get<ClassT>();
+        if (memberIndex != -1) {
+
+            if (type.type != Type::Struct && type.type != Type::Class) {
+                throw VBParsingError{loc,
+                                     "cannot access member of non object (ie "
+                                     "not struct or class)"};
+            }
+
+            auto s = type.type == Type::Struct ? baseVar->get<StructT>().get()
+                                               : baseVar->get<ClassT>().get();
+
             return {&s->get(memberIndex)};
         }
 
-        throw VBParsingError{
-            loc, "cannot access member of non object (ie not struct or class)"};
+        // TODO: Cache function
+        auto memberFunction = type.classType->module->function(name);
+        if (memberFunction) {
+            return FunctionRef{memberFunction, baseVar->get<ClassT>()};
+        }
+
+        throw VBParsingError{context.currentLocation(),
+                             "cannot find member " + name};
     };
 }
 
@@ -280,24 +282,34 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
     auto expr = IdentifierFuncT{};
 
     expr = [name](LocalContext &context) -> ValueOrRef {
-        // TODO: Implement arguments here
-        if (auto index = context.module->staticVariable(name); index != -1) {
-            auto type = context.module->staticVariables.at(index).second.type();
+        if (auto index = context.functionBody->function()->argumentIndex(name);
+            index != -1) {
+            return {&context.args.at(index).get()};
+        }
+        else if (auto index = context.functionBody->variableIndex(name);
+                 index != -1) {
+            return {&context.localVariables.at(index)};
+        }
+        else if (auto index = context.module->staticVariable(name);
+                 index != -1) {
             return {&context.module->staticVariables.at(index).second};
         }
         else if (auto f = context.function(name)) {
             // TODO: Cache function pointer
             return FunctionRef{f};
         }
-        else if (auto index = context.functionBody->variableIndex(name);
-                 index != -1) {
-            auto type = context.functionBody->variable(index);
-            return {&context.localVariables.at(index)};
+        else if (name == "Me") {
+            if (context.me.typeName() != Type::Class) {
+                throw VBParsingError{
+                    context.currentLocation(),
+                    "Trying to access 'Me' in static context " + name};
+            }
+            return {context.me};
         }
-        else if (auto index =
-                     context.functionBody->function()->argumentIndex(name);
-                 index != -1) {
-            return {&context.args.at(index).get()};
+        else if (auto me = context.me.toClass()) {
+            if (auto index = me->getMemberIndex(name); index != -1) {
+                return {&me->get(index)};
+            }
         }
 
         throw VBParsingError{context.currentLocation(),
@@ -457,25 +469,25 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token,
             argExpressionList,
             function = static_cast<const Function *>(nullptr),
             loc = token.lastLoc](LocalContext &context) mutable {
+        //        if (!function) {
+        auto ref = functionExpression(context).function();
+        function = ref.get();
         if (!function) {
-            function = functionExpression(context).function().get();
-            //            if (!function) {
-            //                VBRuntimeError{"could not find function " +
-            //                methodName};
-            //            }
-            //            else {
-            if (argExpressionList.size() > function->arguments().size()) {
-                VBParsingError{loc,
-                               "to many argument for function " +
-                                   std::string{function->name()}};
-            }
-            //            }
+            VBRuntimeError{"could not find function"};
         }
+        if (argExpressionList.size() > function->arguments().size()) {
+            VBParsingError{loc,
+                           "to many argument for function " +
+                               std::string{function->name()}};
+        }
+        //        }
+
+        // TODO: Cache static function calls
 
         auto args = evaluateArgumentList(
             argExpressionList, function->arguments(), context);
 
-        function->call(args, context);
+        function->call(args, ref.me, context);
     };
 }
 
@@ -576,25 +588,23 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         assertEmpty(token);
         break;
 
+    case Token::Me:
     case Token::Word: {
-        auto type2 = token.second ? token.second->type() : Token::Empty;
-        if (type2 == Token::Operator ||
-            (token.second && token.second->content == ".")) {
-            // TODO: Fix this
+        {
             auto identifier = parseIdentifier(token);
-            return parseAssignment(token, identifier);
-        }
-        else {
 
-            auto functionName = parseExpression(token);
-
-            return parseMethodCall(token, functionName);
+            if (token.content() == "=") {
+                return parseAssignment(token, identifier);
+            }
+            else {
+                return parseMethodCall(token, identifier);
+            }
         }
     }
     default:
 
         throw VBParsingError{*token.first,
-                             "unexpected command " + token.first->content};
+                             "unexpected command " + token.content()};
     }
 
     return {};
@@ -648,6 +658,16 @@ std::unique_ptr<Function> parseFunction(Line *line,
 
     auto arguments = parseArguments(token);
 
+    bool isStatic = static_cast<bool>(token.currentModule->classType);
+
+    //    if (token.currentModule->classType) {
+    //        arguments.insert(
+    //            arguments.begin(),
+    //            FunctionArgument{
+    //                .type = {Type::Class,
+    //                token.currentModule->classType.get()}, .name = "Me"});
+    //    }
+
     auto body = std::make_shared<FunctionBody>();
 
     token.currentFunctionBody = body.get();
@@ -665,11 +685,13 @@ std::unique_ptr<Function> parseFunction(Line *line,
     }
 
     Function::FuncT f = [body](const FunctionArgumentValues &args,
+                               Value me,
                                LocalContext &context) -> Value {
-        return body->call(args, context);
+        return body->call(args, me, context);
     };
 
-    auto function = std::make_unique<Function>(name, std::move(arguments), f);
+    auto function =
+        std::make_unique<Function>(name, std::move(arguments), f, isStatic);
     body->function(function.get());
 
     token.endFunction();

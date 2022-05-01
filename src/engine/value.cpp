@@ -98,3 +98,10 @@ DoubleT Value::toFloat() const {
 
     return {};
 }
+
+ClassT Value::toClass() const {
+    if (value.index() == Type::Class) {
+        return get<ClassT>();
+    }
+    return {};
+}

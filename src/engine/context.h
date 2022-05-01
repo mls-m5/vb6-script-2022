@@ -20,16 +20,17 @@ struct LocalContext {
     Module *module = nullptr;
     const class FunctionBody *functionBody = nullptr;
     size_t line = 0;
+    Value me = Value{Type::Class};
 
     LocalContext(GlobalContext &globalContext,
                  const std::vector<std::pair<std::string, Type>> vars = {},
                  FunctionArgumentValues = {},
-                 Module *module = {});
+                 Module *module = nullptr,
+                 Value me = {});
 
     GlobalContext &globalContext;
 
     // Source location for error messages
-
     struct Location currentLocation() const;
 
     const Function *function(std::string_view name) const;

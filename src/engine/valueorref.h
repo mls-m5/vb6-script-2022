@@ -4,6 +4,7 @@
 
 struct FunctionRef {
     const class Function *function;
+    ClassT me;
 
     const Function *get() {
         return function;

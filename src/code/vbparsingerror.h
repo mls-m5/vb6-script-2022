@@ -6,7 +6,7 @@
 struct VBParsingError : std::runtime_error {
     VBParsingError(const Location &loc, std::string text)
         : std::runtime_error{loc.path->string() + ": " +
-                             std::to_string(loc.line) + " " + text} {}
+                             std::to_string(loc.line) + ": " + text} {}
 };
 
 // Should never be encountered by user

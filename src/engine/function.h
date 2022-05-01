@@ -18,21 +18,25 @@ struct FunctionArguments : public std::vector<FunctionArgument> {};
 
 class Function {
 public:
-    using FuncT = std::function<Value(const FunctionArgumentValues &,
-                                      LocalContext &context)>;
+    using FuncT = std::function<Value(
+        const FunctionArgumentValues &, Value me, LocalContext &context)>;
 
 private:
     std::string _name;
     FunctionArguments _arguments;
     FuncT _f;
+    bool _isStatic = true;
 
 public:
-    Function(std::string name, FunctionArguments args, FuncT f)
+    Function(std::string name, FunctionArguments args, FuncT f, bool isStatic)
         : _name{std::move(name)}
         , _arguments{std::move(args)}
-        , _f{f} {}
+        , _f{f}
+        , _isStatic{isStatic} {}
 
-    Value call(const FunctionArgumentValues &args, LocalContext &context) const;
+    Value call(const FunctionArgumentValues &args,
+               Value me,
+               LocalContext &context) const;
 
     std::string_view name() const {
         return _name;

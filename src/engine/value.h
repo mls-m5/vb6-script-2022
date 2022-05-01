@@ -4,11 +4,6 @@
 #include <string>
 
 struct Value {
-    //    std::
-    //        variant<std::string, SingleT, DoubleT, IntegerT, LongT, ClassT,
-    //        StructT>
-    //            value;
-
     TypeVariantT value;
 
     Value() = default;
@@ -65,10 +60,7 @@ struct Value {
 
     bool toBool() const;
 
-    // Set value and change type at the same time
-    //    void setAny(const Value &other) {
-    //        value = other.value;
-    //    }
+    ClassT toClass() const;
 
     // Implement operator =()
 };

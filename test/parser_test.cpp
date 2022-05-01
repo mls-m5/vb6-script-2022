@@ -21,7 +21,7 @@ End Sub
 
     EXPECT(f);
 
-    f->call(context.args, context.local);
+    f->call(context.args, {}, context.local);
 }
 
 TEST_CASE("ignore option statements") {
@@ -55,7 +55,7 @@ End Sub
     int arg2Res = -1;
 
     auto inner = Function::FuncT{
-        [&](const FunctionArgumentValues &args, LocalContext &context) {
+        [&](const FunctionArgumentValues &args, Value, LocalContext &context) {
             context.module = testModule.get();
             isCalled = true;
             numArgs = args.size();
@@ -73,7 +73,8 @@ End Sub
             FunctionArgument{Type{Type::Integer}, "x"},
             FunctionArgument{Type{Type::Integer}, "y"},
         }},
-        inner));
+        inner,
+        true));
 
     auto module = parse(ss, "", context.global.modules);
     context.local.module = module.get();
@@ -82,7 +83,7 @@ End Sub
 
     EXPECT(f);
 
-    f->call(context.args, context.local);
+    f->call(context.args, {}, context.local);
 
     ASSERT_EQ(isCalled, true);
     ASSERT_EQ(numArgs, 2);

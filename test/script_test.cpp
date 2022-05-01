@@ -29,7 +29,7 @@ std::vector<std::filesystem::path> parseImports(std::filesystem::path path) {
 TEST_SUIT_BEGIN;
 
 auto innerAssert = Function::FuncT{
-    [&](const FunctionArgumentValues &args, LocalContext &context) {
+    [&](const FunctionArgumentValues &args, Value, LocalContext &context) {
         if (args.size() != 1) {
             throw std::runtime_error{
                 "assert called with wrong number of arguments"};
@@ -76,13 +76,14 @@ for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
                 FunctionArgument{Type{Type::Integer}, "x"},
                 FunctionArgument{Type{Type::Integer}, "y"},
             }},
-            innerAssert));
+            innerAssert,
+            true));
 
         context.global.modules.push_back(testModule);
 
         context.local.module = module.get();
 
-        module->function("Main")->call({}, context.local);
+        module->function("Main")->call({}, {}, context.local);
     };
 }
 

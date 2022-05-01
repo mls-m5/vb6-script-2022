@@ -8,6 +8,7 @@ TEST_CASE("basic function call") {
     auto a = -1, b = -1, c = -1;
 
     auto lambda = [&](const FunctionArgumentValues &args,
+                      Value me,
                       LocalContext &context) -> Value {
         a = args.at(0).get().get<IntegerT>();
         b = args.at(1).get().get<IntegerT>();
@@ -25,7 +26,8 @@ TEST_CASE("basic function call") {
                               FunctionArgument{Type{Type::Integer}, "y"},
                           },
                       },
-                      lambda};
+                      lambda,
+                      true};
 
     auto args = FunctionArgumentValues{};
     args.push_back({10});
@@ -33,7 +35,7 @@ TEST_CASE("basic function call") {
     auto value = Value{30};
     args.push_back({&value});
 
-    ASSERT_EQ(std::get<IntegerT>(f.call(args, context).value), 120);
+    ASSERT_EQ(std::get<IntegerT>(f.call(args, {}, context).value), 120);
 
     ASSERT_EQ(a, 10);
     ASSERT_EQ(b, 20);
@@ -52,7 +54,7 @@ TEST_CASE("basic function body") {
     auto globalContext = GlobalContext{};
     auto dummyContext = LocalContext{globalContext};
 
-    auto ret = body.call({}, dummyContext);
+    auto ret = body.call({}, {}, dummyContext);
 
     ASSERT_EQ(ret.typeName(), Type::Integer);
     ASSERT_EQ(ret.get<IntegerT>(), 20);
