@@ -107,6 +107,7 @@ struct TokenPair {
 using NextLineT = std::function<Line *()>;
 using ExpressionT = std::function<ValueOrRef(LocalContext &)>;
 using IdentifierFuncT = std::function<ValueOrRef(LocalContext &context)>;
+ExpressionT parseExpression(TokenPair &token);
 
 void parseAssert(bool condition,
                  const Location &location,
@@ -322,6 +323,19 @@ ExpressionT parseNew(TokenPair &token) {
     };
 }
 
+ExpressionT parseBinary(ExpressionT first, TokenPair &token) {
+    // static std::map<std::string>
+    auto op = token.content();
+
+    token.next();
+    auto second = parseExpression(token);
+
+    return [first, second](LocalContext &context) {
+        return ValueOrRef{first(context)->toInteger() +
+                          first(context)->toInteger()};
+    };
+}
+
 ExpressionT parseExpression(TokenPair &token) {
     auto keyword = token.type();
 
@@ -364,12 +378,15 @@ ExpressionT parseExpression(TokenPair &token) {
         throw VBParsingError{*token.first, "failied to parse expression"};
     }
 
-    if (!token.first) {
+    if (!token) {
         return expr;
     }
 
     // TODO: Handle for exemple binary expressions
-    switch (token.first->type()) {
+    switch (token.type()) {
+    case Token::Operator:
+        return parseBinary(expr, token);
+        break;
     default:
         return expr;
     }

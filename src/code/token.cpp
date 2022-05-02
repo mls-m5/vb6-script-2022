@@ -18,7 +18,7 @@ bool iCompare(std::string_view lowerString, std::string ordinary) {
 }
 
 Token::Keyword getKeyword(std::string name) {
-    constexpr static auto operators = std::string_view{"=*"};
+    constexpr static auto operators = std::string_view{"=*+-<>/\\"};
 
     if (name.empty()) {
         return Token::Empty;
