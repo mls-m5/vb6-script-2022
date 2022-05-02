@@ -40,11 +40,11 @@ struct TokenPair {
         currentFunctionBody = nullptr;
     }
 
-    int localVariable(std::string_view name) {
-        auto index = currentFunctionBody->variableIndex(name);
+    //    int localVariable(std::string_view name) {
+    //        auto index = currentFunctionBody->variableIndex(name);
 
-        return -1;
-    }
+    //        return -1;
+    //    }
 
     TokenPair &next() {
         std::tie(first, second) = f();
@@ -108,6 +108,12 @@ using NextLineT = std::function<Line *()>;
 using ExpressionT = std::function<ValueOrRef(LocalContext &)>;
 using IdentifierFuncT = std::function<ValueOrRef(LocalContext &context)>;
 ExpressionT parseExpression(TokenPair &token);
+
+[[nodiscard]] FunctionBody::CommandT parseBlock(
+    Line **line,
+    TokenPair &token,
+    NextLineT nextLine,
+    std::function<bool(Token::Keyword)> endCondition);
 
 void parseAssert(bool condition,
                  const Location &location,
@@ -683,17 +689,21 @@ void parseStruct(Line *line,
 
         structType.addAddVariable(memberName, type);
     }
+
+    nextLine();
 }
 
-FunctionBody::CommandT parseIfStatement(Line *line,
+FunctionBody::CommandT parseIfStatement(Line **line,
                                         TokenPair &token,
                                         NextLineT nextLine) {
 
-    auto codeBlock = std::vector<FunctionBody::CommandT>{};
+    auto codeBlock = FunctionBody::CommandT{};
 
     FunctionBody::CommandT elseStatement = {};
 
+    auto isRoot = token.type() == Token::If;
     auto isElse = token.type() == Token::Else;
+    //    auto isElseIf = token.type() == Token::ElseIf;
 
     token.next();
     auto condition = [&]() -> ExpressionT {
@@ -705,26 +715,39 @@ FunctionBody::CommandT parseIfStatement(Line *line,
         }
     }();
 
-    for (line = nextLine(); line; line = nextLine()) {
-        token.next();
-        auto t = token.type();
-        if (t == Token::End) {
-            break;
-        }
-        else if (t == Token::ElseIf || t == Token::Else) {
-            elseStatement = parseIfStatement(line, token, nextLine);
-            break;
-        }
-        else {
-            codeBlock.push_back([](LocalContext &context) {});
-        }
+    codeBlock = parseBlock(line, token, nextLine, [](auto t) {
+        return t == Token::End || t == Token::ElseIf || t == Token::Else;
+    });
+
+    std::cout << token.lastLoc.toString() << std::endl;
+    if (token.type() != Token::End) {
+        // TODO: Handle all else statements
+        elseStatement = parseIfStatement(line, token, nextLine);
+    }
+    //, [](auto t) {
+    // return t == Token::End || t == Token::ElseIf
+    // || t == Token::Else;
+    //});
+
+    //    for (line = nextLine(); line; line = nextLine()) {
+    //        token.next();
+    //        auto t = token.type();
+    //        if (t == Token::End) {
+    //            break;
+    //        }
+    //        else if (t == Token::ElseIf || t == Token::Else) {
+    //            elseStatement = parseIfStatement(line, token, nextLine);
+    //            break;
+    //        }
+    //    }
+
+    if (isRoot) {
+        //        *line = nextLine();
     }
 
     return [condition, codeBlock, elseStatement](LocalContext &context) {
         if (condition(context)->toBool()) {
-            for (auto &command : codeBlock) {
-                command(context);
-            }
+            codeBlock(context);
         }
         else if (elseStatement) {
             elseStatement(context);
@@ -732,7 +755,45 @@ FunctionBody::CommandT parseIfStatement(Line *line,
     };
 }
 
-std::unique_ptr<Function> parseFunction(Line *line,
+FunctionBody::CommandT parseBlock(
+    Line **line,
+    TokenPair &token,
+    NextLineT nextLine,
+    std::function<bool(Token::Keyword)> endCondition) {
+
+    auto block = std::vector<FunctionBody::CommandT>{};
+
+    //    auto body = token.currentFunctionBody;
+    for (*line = nextLine(); *line; *line = nextLine()) {
+        token.next();
+        auto t = token.type();
+        if (endCondition(t)) {
+            return //
+                [block = std::move(block)](LocalContext &context) {
+                    for (auto &command : block) {
+                        command(context);
+                    }
+                };
+        }
+
+        if (t == Token::If) {
+            auto ifStatement = parseIfStatement(line, token, nextLine);
+            *line = nextLine();
+            return ifStatement;
+        }
+        else {
+            // TODO: Move line number into the command type
+            if (auto command = parseCommand(token)) {
+                block.push_back(std::move(command));
+            }
+        }
+    }
+
+    throw VBParsingError{token.lastLoc,
+                         "Expected end of block, but got end of file"};
+}
+
+std::unique_ptr<Function> parseFunction(Line **line,
                                         Scope scope,
                                         TokenPair &token,
                                         NextLineT nextLine) {
@@ -747,20 +808,15 @@ std::unique_ptr<Function> parseFunction(Line *line,
 
     token.currentFunctionBody = body.get();
 
-    for (line = nextLine(); line; line = nextLine()) {
-        token.next();
-        auto t = token.type();
-        if (t == Token::End) {
-            break;
-        }
-        if (t == Token::If) {
-            body->pushCommand(parseIfStatement(line, token, nextLine),
-                              token.lastLoc.line);
-        }
-        else {
-            body->pushCommand(parseCommand(token), token.lastLoc.line);
-        }
-    }
+    body->pushCommand(parseBlock(line,
+                                 token,
+                                 nextLine,
+                                 [](Token::Keyword t) {
+                                     return t == Token::End; //
+                                 }),
+                      token.lastLoc.line);
+
+    *line = nextLine();
 
     Function::FuncT f = [body](const FunctionArgumentValues &args,
                                Value me,
@@ -792,7 +848,7 @@ std::unique_ptr<Module> parseGlobal(Line *line,
 
     Scope currentScope;
 
-    for (; line; line = nextLine()) {
+    for (; line; /*line = nextLine()*/) {
         currentScope = Private;
         TokenPair token{};
         token.f = nextToken;
@@ -800,9 +856,9 @@ std::unique_ptr<Module> parseGlobal(Line *line,
         token.next();
         token.modules = moduleList; // Copy on every line... :)
 
-        if (!token.first) {
-            continue;
-        }
+        //        if (!token.first) {
+        //            continue;
+        //        }
 
         switch (token.first->type()) {
         case Token::Public:
@@ -812,13 +868,15 @@ std::unique_ptr<Module> parseGlobal(Line *line,
             currentScope = Private;
             break;
         case Token::Sub:
-            module->addFunction(parseFunction(line, Private, token, nextLine));
+            module->addFunction(parseFunction(&line, Private, token, nextLine));
             continue;
             break;
         case Token::Option:
+            nextLine();
             continue; // Skip option statements, assume Option Explicit
         case Token::Dim:
             parseMemberDeclaration(token);
+            line = nextLine();
             continue;
         case Token::Structure:
             parseStruct(line, currentScope, token, nextLine);
@@ -839,11 +897,12 @@ std::unique_ptr<Module> parseGlobal(Line *line,
         switch (token.first->type()) {
         case Token::Sub:
             module->addFunction(
-                parseFunction(line, currentScope, token, nextLine));
+                parseFunction(&line, currentScope, token, nextLine));
             break;
 
         case Token::Word:
             parseMemberDeclaration(token);
+            line = nextLine();
             break;
 
         default:
