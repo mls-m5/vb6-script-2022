@@ -99,9 +99,40 @@ DoubleT Value::toFloat() const {
     return {};
 }
 
+// Value Value::toType(Type type) const {
+//     switch (type.type) {
+//     case Type::Integer:
+//     case Type::Long:
+//         return toInteger();
+
+//    case Type::Double:
+//    case Type::Single:
+//        return toFloat();
+
+//        break;
+//    default:
+//        break;
+//    }
+
+//    throw VBRuntimeError{"could not convert to numeric value"};
+//}
+
 ClassT Value::toClass() const {
     if (value.index() == Type::Class) {
         return get<ClassT>();
     }
     return {};
+}
+
+Type Value::commonType(Type other) const {
+    if (typeName() == Type::Double || other.type == Type::Double) {
+        return {Type::Double};
+    }
+    if (typeName() == Type::Single || other.type == Type::Single) {
+        return {Type::Single};
+    }
+    if (typeName() == Type::Long || other.type == Type::Long) {
+        return {Type::Long};
+    }
+    return {Type::Integer};
 }

@@ -323,17 +323,65 @@ ExpressionT parseNew(TokenPair &token) {
     };
 }
 
+template <typename T>
+std::function<T(T, T)> getOperator(std::string name) {
+
+#define DEFINE_BINARY_OPERATOR(x)                                              \
+    {                                                                          \
+#x, [](T first, T second) -> T { return first x second; }              \
+    }
+
+    static const auto ops = std::map<std::string, std::function<T(T, T)>>{
+        DEFINE_BINARY_OPERATOR(+),
+        DEFINE_BINARY_OPERATOR(-),
+        DEFINE_BINARY_OPERATOR(/),
+        DEFINE_BINARY_OPERATOR(*),
+        {"=", [](T first, T second) -> T { return first == second; }},
+        {"<>", [](T first, T second) -> T { return first != second; }},
+    };
+
+    if (auto f = ops.find(name); f != ops.end()) {
+        return f->second;
+    }
+
+#undef DEFINE_BINARY_OPERATOR
+
+    throw VBRuntimeError{"binary operator not implemented: " + name};
+}
+
 ExpressionT parseBinary(ExpressionT first, TokenPair &token) {
-    // static std::map<std::string>
     auto op = token.content();
 
     token.next();
     auto second = parseExpression(token);
 
-    return [first, second](LocalContext &context) {
-        return ValueOrRef{first(context)->toInteger() +
-                          first(context)->toInteger()};
-    };
+    auto opFInt = getOperator<LongT>(op);
+    auto opFFloat = getOperator<DoubleT>(op);
+
+    return
+        [first, second, opFInt, opFFloat](LocalContext &context) -> ValueOrRef {
+            auto firstResult = first(context);
+            auto secondResult = second(context);
+            auto type = firstResult->commonType(secondResult->type());
+            // TODO: Handle different operators
+
+            switch (type.type) {
+            case Type::Integer:
+            case Type::Long:
+                return Value{opFInt(firstResult->toInteger(),
+                                    secondResult->toInteger())};
+            case Type::Double:
+            case Type::Single:
+                return Value{
+                    opFFloat(firstResult->toFloat(), secondResult->toFloat())};
+                break;
+            default:
+                break;
+            }
+
+            throw VBRuntimeError{context.currentLocation(),
+                                 "could not convert to numeric value"};
+        };
 }
 
 ExpressionT parseExpression(TokenPair &token) {

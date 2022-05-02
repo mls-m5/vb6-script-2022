@@ -60,7 +60,22 @@ struct Value {
 
     bool toBool() const;
 
+    //    Value toType() const;
+
     ClassT toClass() const;
+
+    // What type binary operators will result in
+    Type commonType(Type other) const;
+
+    template <typename T>
+    T to() const {
+        if constexpr (std::is_same_v<IntegerT, T> || std::is_same_v<LongT, T>) {
+            return toInteger();
+        }
+        else if (std::is_same_v<SingleT, T> || std::is_same_v<DoubleT, T>) {
+            return toFloat();
+        }
+    }
 
     // Implement operator =()
 };

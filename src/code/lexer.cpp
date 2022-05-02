@@ -66,6 +66,7 @@ Line splitString(std::string str, size_t lineNum) {
             continue;
         }
         else if (type != lastType || type == Operator) {
+            // TODO: Handle multi char operators
             line.push_back(Token{std::string{c}, lineNum});
         }
         else {

@@ -8,4 +8,5 @@ Sub Main()
     Y = 20 - 10
 
     Assert X = Y
+    Assert 0 = 0
 End Sub
