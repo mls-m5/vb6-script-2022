@@ -685,43 +685,81 @@ void parseStruct(Line *line,
     }
 }
 
+FunctionBody::CommandT parseIfStatement(Line *line,
+                                        TokenPair &token,
+                                        NextLineT nextLine) {
+
+    auto codeBlock = std::vector<FunctionBody::CommandT>{};
+
+    FunctionBody::CommandT elseStatement = {};
+
+    auto isElse = token.type() == Token::Else;
+
+    token.next();
+    auto condition = [&]() -> ExpressionT {
+        if (isElse) {
+            return [](LocalContext &context) -> Value { return true; };
+        }
+        else {
+            return parseExpression(token);
+        }
+    }();
+
+    for (line = nextLine(); line; line = nextLine()) {
+        token.next();
+        auto t = token.type();
+        if (t == Token::End) {
+            break;
+        }
+        else if (t == Token::ElseIf || t == Token::Else) {
+            elseStatement = parseIfStatement(line, token, nextLine);
+            break;
+        }
+        else {
+            codeBlock.push_back([](LocalContext &context) {});
+        }
+    }
+
+    return [condition, codeBlock, elseStatement](LocalContext &context) {
+        if (condition(context)->toBool()) {
+            for (auto &command : codeBlock) {
+                command(context);
+            }
+        }
+        else if (elseStatement) {
+            elseStatement(context);
+        }
+    };
+}
+
 std::unique_ptr<Function> parseFunction(Line *line,
                                         Scope scope,
                                         TokenPair &token,
                                         NextLineT nextLine) {
 
     token.next();
-
     auto name = token.content();
-
     token.next();
-
     auto arguments = parseArguments(token);
 
     bool isStatic = static_cast<bool>(token.currentModule->classType);
-
-    //    if (token.currentModule->classType) {
-    //        arguments.insert(
-    //            arguments.begin(),
-    //            FunctionArgument{
-    //                .type = {Type::Class,
-    //                token.currentModule->classType.get()}, .name = "Me"});
-    //    }
-
     auto body = std::make_shared<FunctionBody>();
 
     token.currentFunctionBody = body.get();
 
     for (line = nextLine(); line; line = nextLine()) {
         token.next();
-        if (!token.first) {
-            continue;
-        }
-        auto keyWord = token.first->type();
-        if (keyWord == Token::End) {
+        auto t = token.type();
+        if (t == Token::End) {
             break;
         }
-        body->pushCommand(parseCommand(token), token.lastLoc.line);
+        if (t == Token::If) {
+            body->pushCommand(parseIfStatement(line, token, nextLine),
+                              token.lastLoc.line);
+        }
+        else {
+            body->pushCommand(parseCommand(token), token.lastLoc.line);
+        }
     }
 
     Function::FuncT f = [body](const FunctionArgumentValues &args,

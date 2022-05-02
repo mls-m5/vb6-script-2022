@@ -58,7 +58,9 @@ struct Value {
 
     DoubleT toFloat() const;
 
-    bool toBool() const;
+    bool toBool() const {
+        return toInteger();
+    }
 
     //    Value toType() const;
 
