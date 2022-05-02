@@ -3,6 +3,7 @@
 Sub Main()
 	Dim A As Class08
 
+	' Should use "Set"
 	A = New Class08
 
 	A.X = 10

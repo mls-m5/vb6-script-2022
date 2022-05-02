@@ -35,37 +35,16 @@ struct TokenPair {
     std::vector<std::shared_ptr<Module>> modules;
 
     FunctionBody *currentFunctionBody = nullptr;
-    //    std::vector<std::string> namedLocalVariables;
-    //    std::vector<std::pair<std::string, Type>> namedArguments;
 
     void endFunction() {
         currentFunctionBody = nullptr;
-        //        namedLocalVariables.clear();
-        //        namedArguments.clear();
     }
 
     int localVariable(std::string_view name) {
-        //        for (size_t i = 0; i < namedLocalVariables.size(); ++i) {
-        //            if (namedLocalVariables.at(i) == name) {
-        //                return i;
-        //            }
-        //        }
-
         auto index = currentFunctionBody->variableIndex(name);
 
         return -1;
     }
-
-    // Get index to argument in current context
-    //    int argument(std::string_view name) {
-    //        for (size_t i = 0; i < namedArguments.size(); ++i) {
-    //            if (namedArguments.at(i).first == name) {
-    //                return i;
-    //            }
-    //        }
-
-    //        return -1;
-    //    }
 
     TokenPair &next() {
         std::tie(first, second) = f();
@@ -216,7 +195,6 @@ FunctionArguments parseArguments(TokenPair &token) {
         auto type = parseAsStatement(token);
 
         args.push_back({type, name, !byVal});
-        //        token.namedArguments.push_back({name, type});
 
         if (token.content() == ",") {
             shouldContinue = true;
@@ -372,9 +350,6 @@ ExpressionT parseExpression(TokenPair &token) {
     case Token::Word: {
         auto id = parseIdentifier(token);
         expr = id;
-        //        expr = [id](LocalContext &context) -> ValueOrRef {
-        //            return id(context); //
-        //        };
     } break;
 
     case Token::New:
@@ -507,8 +482,6 @@ void parseLocalVariableDeclaration(TokenPair &token) {
 
     auto type = parseAsStatement(token);
 
-    //    token.namedLocalVariables.push_back(name);
-
     token.currentFunctionBody->pushLocalVariable(name, type);
 }
 
@@ -560,6 +533,8 @@ FunctionBody::CommandT parseAssignment(TokenPair &token,
     }
 
     auto expr = parseExpression(token);
+
+    assertEmpty(token);
 
     return [target, expr](LocalContext &context) {
         *target(context) = *expr(context);
