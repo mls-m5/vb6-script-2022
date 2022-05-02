@@ -759,7 +759,8 @@ FunctionBody::CommandT parseBlock(
     Line **line,
     TokenPair &token,
     NextLineT nextLine,
-    std::function<bool(Token::Keyword)> endCondition) {
+    std::function<bool(Token::Keyword)> endCondition,
+    bool consumeEnd = true) {
 
     auto block = std::vector<FunctionBody::CommandT>{};
 
@@ -768,6 +769,7 @@ FunctionBody::CommandT parseBlock(
         token.next();
         auto t = token.type();
         if (endCondition(t)) {
+            *line = nextLine();
             return //
                 [block = std::move(block)](LocalContext &context) {
                     for (auto &command : block) {
