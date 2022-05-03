@@ -370,7 +370,6 @@ ExpressionT parseBinary(ExpressionT first, TokenPair &token) {
             auto firstResult = first(context);
             auto secondResult = second(context);
             auto type = firstResult->commonType(secondResult->type());
-            // TODO: Handle different operators
 
             switch (type.type) {
             case Type::Integer:
@@ -437,7 +436,6 @@ ExpressionT parseExpression(TokenPair &token) {
         return expr;
     }
 
-    // TODO: Handle for exemple binary expressions
     switch (token.type()) {
     case Token::Operator:
         return parseBinary(expr, token);
@@ -516,7 +514,6 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token,
             argExpressionList,
             function = static_cast<const Function *>(nullptr),
             loc = token.lastLoc](LocalContext &context) mutable {
-        //        if (!function) {
         auto ref = functionExpression(context).function();
         function = ref.get();
         if (!function) {
@@ -527,7 +524,6 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token,
                            "to many argument for function " +
                                std::string{function->name()}};
         }
-        //        }
 
         // TODO: Cache static function calls
 
@@ -727,7 +723,6 @@ FunctionBody::CommandT parseIfStatement(Line **line,
     std::cout << token.lastLoc.toString() << std::endl;
 
     if (token.type() != Token::End) {
-        // TODO: Handle all else statements
         elseStatement = parseIfStatement(line, token, nextLine);
     }
 
@@ -754,7 +749,6 @@ FunctionBody::CommandT parseBlock(
 
     auto block = std::vector<FunctionBody::CommandT>{};
 
-    //    auto body = token.currentFunctionBody;
     for (*line = nextLine(); *line;) {
         token.next();
         auto t = token.type();
@@ -808,8 +802,6 @@ std::unique_ptr<Function> parseFunction(Line **line,
                                      return t == Token::End; //
                                  }),
                       token.lastLoc.line);
-
-    //    *line = nextLine();
 
     Function::FuncT f = [body](const FunctionArgumentValues &args,
                                Value me,
@@ -879,7 +871,6 @@ std::unique_ptr<Module> parseGlobal(Line *line,
                                  "unexpected token at global scope: " +
                                      token.content()};
         }
-        //        line = nextLine();
 
         token.next();
 
@@ -904,8 +895,6 @@ std::unique_ptr<Module> parseGlobal(Line *line,
                                  "unexpected token at global scope " +
                                      token.first->content};
         }
-
-        //        line = nextLine();
     }
 
     return module;

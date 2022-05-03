@@ -1,10 +1,6 @@
 #include "functionbody.h"
 #include "classinstance.h"
 
-// Type FunctionBody::variable(int i) {
-//     return _localVariables.at(i);
-// }
-
 Type FunctionBody::variable(int i) const {
     return _localVariables.at(i).second;
 }
