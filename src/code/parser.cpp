@@ -805,16 +805,25 @@ FunctionBody::CommandT parseForStatement(Line **line,
 
     token.next();
 
-    auto type = std::optional<Type>{};
+    auto isScopeLocalVariable = false;
 
     if (token.type() == Token::As) {
-        type = parseAsStatement(token);
-    }
+        isScopeLocalVariable = true;
+        auto type = parseAsStatement(token);
 
-    // TODO: Handle declaration of variable here
+        token.currentFunctionBody->pushLocalVariable(name, type);
+    }
 
     auto variableIdentification =
         getLocalIdentifier(name, token.currentFunctionBody);
+
+    if (!variableIdentification) {
+        throw VBParsingError{token.lastLoc, "Could not find variable " + name};
+    }
+
+    if (isScopeLocalVariable) {
+        token.currentFunctionBody->forgetLocalVariableName(name);
+    }
 
     if (token.content() != "=") {
         throw VBParsingError{token.lastLoc,
@@ -838,7 +847,7 @@ FunctionBody::CommandT parseForStatement(Line **line,
 
     if (token.type() == Token::Step) {
         token.next();
-        auto step = parseExpression(token);
+        step = parseExpression(token);
 
         //        step = [variableIdentification,
         //                stepExpr](LocalContext &context) -> ValueOrRef {
