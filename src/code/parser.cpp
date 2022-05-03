@@ -260,6 +260,16 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token, IdentifierFuncT base) {
     };
 }
 
+IdentifierFuncT getLocalIdentifier(std::string_view name, FunctionBody *body) {
+    if (auto index = body->variableIndex(name); index != -1) {
+        return [index](LocalContext &context) -> ValueOrRef {
+            return {&context.localVariables.at(index)};
+        };
+    }
+
+    return {};
+}
+
 IdentifierFuncT parseIdentifier(TokenPair &token) {
     auto loc = token.first->loc;
     auto name = token.first->content;
@@ -273,11 +283,14 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
     // TODO: Do this for function argumens aswell. But then we need to change so
     // that the definitions of arguments is added at the beginning of
     // parseFunction() and not in the end as of now
-    if (auto index = token.currentFunctionBody->variableIndex(name);
-        index != -1) {
-        expr = [index](LocalContext &context) -> ValueOrRef {
-            return {&context.localVariables.at(index)};
-        };
+    //    if (auto index = token.currentFunctionBody->variableIndex(name);
+    //        index != -1) {
+    //        expr = [index](LocalContext &context) -> ValueOrRef {
+    //            return {&context.localVariables.at(index)};
+    //        };
+    //    }
+    if (auto f = getLocalIdentifier(name, token.currentFunctionBody)) {
+        expr = f;
     }
     else {
         // Runtime lookup of variable names
@@ -287,11 +300,6 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
                 index != -1) {
                 return {&context.args.at(index).get()};
             }
-            //            else if (auto index =
-            //            context.functionBody->variableIndex(name);
-            //                     index != -1) {
-            //                return {&context.localVariables.at(index)};
-            //            }
             else if (auto index = context.module->staticVariable(name);
                      index != -1) {
                 return {&context.module->staticVariables.at(index).second};
@@ -741,8 +749,6 @@ FunctionBody::CommandT parseIfStatement(Line **line,
         },
         false);
 
-    //    std::cout << token.lastLoc.toString() << std::endl;
-
     if (token.type() != Token::End) {
         elseStatement = parseIfStatement(line, token, nextLine);
     }
@@ -765,9 +771,83 @@ FunctionBody::CommandT parseForStatement(Line **line,
                                          TokenPair &token,
                                          NextLineT nextLine) {
 
-    auto codeBlock = FunctionBody::CommandT{};
+    token.next();
 
-    // TODO: For or for each
+    if (token.type() == Token::Each) {
+        // TODO: For or for each
+        token.next();
+        auto name = token.content();
+        token.next();
+        auto type = std::optional<Type>{};
+
+        if (token.type() == Token::As) {
+            type = parseAsStatement(token);
+        }
+
+        if (token.type() != Token::In) {
+            throw VBParsingError{token.lastLoc,
+                                 "Expected 'In' got " + token.content()};
+        }
+        token.next();
+
+        auto container = parseIdentifier(token);
+        auto codeBlock = parseBlock(
+            line, token, nextLine, [](auto t) { return t == Token::Next; });
+
+        // TODO: Handle variable declaration
+
+        return [codeBlock](LocalContext &context) {
+            std::cerr << "for each not implemented yet" << std::endl;
+        };
+    }
+
+    auto name = token.content();
+
+    token.next();
+
+    auto type = std::optional<Type>{};
+
+    if (token.type() == Token::As) {
+        type = parseAsStatement(token);
+    }
+
+    // TODO: Handle declaration of variable here
+
+    auto variableIdentification =
+        getLocalIdentifier(name, token.currentFunctionBody);
+
+    if (token.content() != "=") {
+        throw VBParsingError{token.lastLoc,
+                             "Expected '=' got " + token.content()};
+    }
+
+    token.next();
+
+    auto start = parseExpression(token);
+
+    if (token.type() != Token::To) {
+        throw VBParsingError{token.lastLoc,
+                             "Expected 'To' got " + token.content()};
+    }
+    token.next();
+
+    auto stop = parseExpression(token);
+
+    auto step =
+        ExpressionT{[](LocalContext &) -> ValueOrRef { return Value{1}; }};
+
+    if (token.type() == Token::Step) {
+        token.next();
+        auto step = parseExpression(token);
+
+        //        step = [variableIdentification,
+        //                stepExpr](LocalContext &context) -> ValueOrRef {
+        //            auto var = variableIdentification(context);
+        //            var.get() = var->toInteger() +
+        //            stepExpr(context)->toInteger(); return var;
+        //        };
+    }
+
     // TODO: Handle variable declaraciton ie add variable and forget name after
     // scope
 
@@ -784,19 +864,18 @@ FunctionBody::CommandT parseForStatement(Line **line,
 
     //    token.currentFunctionBody->forgetLocalVariableName(name);
 
-    token.next();
-
-    codeBlock = parseBlock(
+    auto code = parseBlock(
         line, token, nextLine, [](auto t) { return t == Token::Next; });
 
-    //    return [condition, codeBlock, elseStatement](LocalContext &context) {
-    //        if (condition(context)->toBool()) {
-    //            codeBlock(context);
-    //        }
-    //        else if (elseStatement) {
-    //            elseStatement(context);
-    //        }
-    //    };
+    return [start, code, stop, step, variableIdentification](
+               LocalContext &context) {
+        auto var = variableIdentification(context);
+        for (var.get() = *start(context);
+             var.get().toInteger() <= stop(context)->toInteger();
+             var.get() = var->toInteger() + step(context)->toInteger()) {
+            code(context);
+        }
+    };
     throw VBParsingError{token.lastLoc, "for loops not implementede yet"};
 }
 
