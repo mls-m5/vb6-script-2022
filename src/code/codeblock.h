@@ -19,19 +19,28 @@ public:
         }
     }
 
-    auto begin() {
-        return _commands.begin();
+    ReturnT run(LocalContext &context) const {
+        for (auto &command : _commands) {
+            if (auto t = command(context); t != ReturnT::Standard) {
+                return t;
+            }
+        }
+        return ReturnT::Standard;
     }
 
-    auto begin() const {
-        return _commands.begin();
-    }
+    //    auto begin() {
+    //        return _commands.begin();
+    //    }
 
-    auto end() {
-        return _commands.end();
-    }
+    //    auto begin() const {
+    //        return _commands.begin();
+    //    }
 
-    auto end() const {
-        return _commands.end();
-    }
+    //    auto end() {
+    //        return _commands.end();
+    //    }
+
+    //    auto end() const {
+    //        return _commands.end();
+    //    }
 };

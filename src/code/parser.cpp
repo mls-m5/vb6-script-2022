@@ -283,12 +283,6 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
     // TODO: Do this for function argumens aswell. But then we need to change so
     // that the definitions of arguments is added at the beginning of
     // parseFunction() and not in the end as of now
-    //    if (auto index = token.currentFunctionBody->variableIndex(name);
-    //        index != -1) {
-    //        expr = [index](LocalContext &context) -> ValueOrRef {
-    //            return {&context.localVariables.at(index)};
-    //        };
-    //    }
     if (auto f = getLocalIdentifier(name, token.currentFunctionBody)) {
         expr = f;
     }
@@ -537,7 +531,7 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token,
     return [functionExpression,
             argExpressionList,
             function = static_cast<const Function *>(nullptr),
-            loc = token.lastLoc](LocalContext &context) mutable {
+            loc = token.lastLoc](LocalContext &context) mutable -> ReturnT {
         auto ref = functionExpression(context).function();
         function = ref.get();
         if (!function) {
@@ -555,7 +549,23 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token,
             argExpressionList, function->arguments(), context);
 
         function->call(args, ref.me, context);
+
+        return ReturnT::Standard;
     };
+}
+
+CommandT parseExitStatement(TokenPair &token) {
+    token.next();
+
+    switch (token.type()) {
+    case Token::For:
+        return [](LocalContext) { return ReturnT::ExitFor; };
+    default:
+        throw VBParsingError{token.lastLoc,
+                             "Unexpected token (expected Do | For | Function | "
+                             "Property | Select | Sub | Try | While) " +
+                                 token.content()};
+    }
 }
 
 void parseLocalVariableDeclaration(TokenPair &token) {
@@ -636,6 +646,7 @@ FunctionBody::CommandT parseAssignment(TokenPair &token,
 
     return [target, expr](LocalContext &context) {
         *target(context) = *expr(context);
+        return ReturnT::Standard;
     };
 }
 
@@ -651,6 +662,7 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         assertEmpty(token);
         return [expr](LocalContext &context) {
             std::cout << expr(context).get().toString() << std::endl; //
+            return ReturnT::Standard;
         };
     } break;
 
@@ -660,7 +672,8 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
 
         assertEmpty(token);
         break;
-
+    case Token::Exit:
+        return parseExitStatement(token);
     case Token::Me:
     case Token::Word: {
         {
@@ -675,7 +688,6 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         }
     }
     default:
-
         throw VBParsingError{*token.first,
                              "unexpected command " + token.content()};
     }
@@ -759,11 +771,12 @@ FunctionBody::CommandT parseIfStatement(Line **line,
 
     return [condition, codeBlock, elseStatement](LocalContext &context) {
         if (condition(context)->toBool()) {
-            codeBlock(context);
+            return codeBlock(context);
         }
         else if (elseStatement) {
-            elseStatement(context);
+            return elseStatement(context);
         }
+        return ReturnT::Standard;
     };
 }
 
@@ -798,6 +811,7 @@ FunctionBody::CommandT parseForStatement(Line **line,
 
         return [codeBlock](LocalContext &context) {
             std::cerr << "for each not implemented yet" << std::endl;
+            return ReturnT::Standard;
         };
     }
 
@@ -819,10 +833,6 @@ FunctionBody::CommandT parseForStatement(Line **line,
 
     if (!variableIdentification) {
         throw VBParsingError{token.lastLoc, "Could not find variable " + name};
-    }
-
-    if (isScopeLocalVariable) {
-        token.currentFunctionBody->forgetLocalVariableName(name);
     }
 
     if (token.content() != "=") {
@@ -848,42 +858,35 @@ FunctionBody::CommandT parseForStatement(Line **line,
     if (token.type() == Token::Step) {
         token.next();
         step = parseExpression(token);
-
-        //        step = [variableIdentification,
-        //                stepExpr](LocalContext &context) -> ValueOrRef {
-        //            auto var = variableIdentification(context);
-        //            var.get() = var->toInteger() +
-        //            stepExpr(context)->toInteger(); return var;
-        //        };
     }
-
-    // TODO: Handle variable declaraciton ie add variable and forget name after
-    // scope
-
-    // Example implementation
-    //    auto name = ...;
-
-    //    try {
-    //        token.currentFunctionBody->pushLocalVariable(name, type);
-    //    }
-    //    catch (std::logic_error &e) {
-    //        throw VBParsingError{token.lastLoc,
-    //                             "Variable " + name + " already exists"};
-    //    }
-
-    //    token.currentFunctionBody->forgetLocalVariableName(name);
 
     auto code = parseBlock(
         line, token, nextLine, [](auto t) { return t == Token::Next; });
 
+    if (isScopeLocalVariable) {
+        token.currentFunctionBody->forgetLocalVariableName(name);
+    }
+
     return [start, code, stop, step, variableIdentification](
                LocalContext &context) {
         auto var = variableIdentification(context);
+        auto ret = ReturnT::Standard;
         for (var.get() = *start(context);
              var.get().toInteger() <= stop(context)->toInteger();
              var.get() = var->toInteger() + step(context)->toInteger()) {
-            code(context);
+            ret = code(context);
+            if (ret == ReturnT::ExitFor) {
+                return ReturnT::Standard;
+                break;
+            }
+            else if (ret == ReturnT::Continue) {
+                continue;
+            }
+            else if (ret != ReturnT::Standard) {
+                return ret;
+            }
         }
+        return ReturnT::Standard;
     };
     throw VBParsingError{token.lastLoc, "for loops not implementede yet"};
 }
@@ -895,7 +898,6 @@ FunctionBody::CommandT parseBlock(
     std::function<bool(Token::Keyword)> endCondition,
     bool consumeEnd) {
 
-    //    auto block = std::vector<FunctionBody::CommandT>{};
     auto block = CodeBlock{};
 
     for (*line = nextLine(); *line;) {
@@ -907,9 +909,7 @@ FunctionBody::CommandT parseBlock(
             }
             return //
                 [block = std::move(block)](LocalContext &context) {
-                    for (auto &command : block) {
-                        command(context);
-                    }
+                    return block.run(context);
                 };
         }
 

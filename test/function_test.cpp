@@ -47,7 +47,8 @@ TEST_CASE("basic function body") {
 
     body.pushCommand(
         [](LocalContext &context) {
-            context.returnValue = IntegerT{20}; //
+            context.returnValue = IntegerT{20};
+            return ReturnT::Standard;
         },
         0);
 

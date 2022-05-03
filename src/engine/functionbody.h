@@ -4,9 +4,41 @@
 #include "function.h"
 #include <vector>
 
+enum class ReturnT {
+    Standard = 0,
+    Return,
+    ExitFor,
+    Continue,
+};
+
+struct CommandT {
+    using FuncT = std::function<ReturnT(LocalContext &)>;
+    FuncT f;
+
+    template <typename F>
+    CommandT(F f)
+        : f{f} {}
+
+    CommandT &operator=(FuncT f) {
+        this->f = f;
+        return *this;
+    }
+
+    CommandT() = default;
+
+    ReturnT operator()(LocalContext &context) const {
+        return f(context);
+    }
+
+    operator bool() const {
+        return static_cast<bool>(f);
+    }
+};
+
 class FunctionBody {
 public:
-    using CommandT = std::function<void(LocalContext &)>;
+    //    using CommandT = std::function<void(LocalContext &)>;
+    using CommandT = ::CommandT;
 
 private:
     std::vector<std::pair<std::string, Type>> _localVariables;
