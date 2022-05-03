@@ -27,20 +27,4 @@ public:
         }
         return ReturnT::Standard;
     }
-
-    //    auto begin() {
-    //        return _commands.begin();
-    //    }
-
-    //    auto begin() const {
-    //        return _commands.begin();
-    //    }
-
-    //    auto end() {
-    //        return _commands.end();
-    //    }
-
-    //    auto end() const {
-    //        return _commands.end();
-    //    }
 };

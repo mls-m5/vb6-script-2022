@@ -8,7 +8,7 @@ enum class ReturnT {
     Standard = 0,
     Return,
     ExitFor,
-    Continue,
+    ContinueFor,
 };
 
 struct CommandT {

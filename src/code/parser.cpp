@@ -361,6 +361,8 @@ std::function<T(T, T)> getOperator(std::string name) {
         DEFINE_BINARY_OPERATOR(-),
         DEFINE_BINARY_OPERATOR(/),
         DEFINE_BINARY_OPERATOR(*),
+        DEFINE_BINARY_OPERATOR(<),
+        DEFINE_BINARY_OPERATOR(>),
         {"=", [](T first, T second) -> T { return first == second; }},
         {"<>", [](T first, T second) -> T { return first != second; }},
     };
@@ -568,6 +570,19 @@ CommandT parseExitStatement(TokenPair &token) {
     }
 }
 
+CommandT parseContinue(TokenPair &token) {
+    token.next();
+
+    switch (token.type()) {
+    case Token::For:
+        return [](LocalContext) { return ReturnT::ContinueFor; };
+    default:
+        throw VBParsingError{token.lastLoc,
+                             "Unexpected token (expected Do | For | While) " +
+                                 token.content()};
+    }
+}
+
 void parseLocalVariableDeclaration(TokenPair &token) {
     if (!token.currentFunctionBody) {
         throw VBInternalParsingError{*token.first, "no function body"};
@@ -674,6 +689,8 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         break;
     case Token::Exit:
         return parseExitStatement(token);
+    case Token::Continue:
+        return parseContinue(token);
     case Token::Me:
     case Token::Word: {
         {
@@ -879,7 +896,7 @@ FunctionBody::CommandT parseForStatement(Line **line,
                 return ReturnT::Standard;
                 break;
             }
-            else if (ret == ReturnT::Continue) {
+            else if (ret == ReturnT::ContinueFor) {
                 continue;
             }
             else if (ret != ReturnT::Standard) {

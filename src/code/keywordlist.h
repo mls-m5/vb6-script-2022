@@ -1,20 +1,20 @@
 #pragma once
 
-//#Const)
-// TOKEN_KEYWORD(#If…Then…#Else)
-// TOKEN_KEYWORD(&)
-// TOKEN_KEYWORD(&=)
-// TOKEN_KEYWORD(*)
-// TOKEN_KEYWORD(*=)
-// TOKEN_KEYWORD(/)
-// TOKEN_KEYWORD(/=)
-// TOKEN_KEYWORD(\)
-// TOKEN_KEYWORD(\=)
-// TOKEN_KEYWORD(^^=)
-// TOKEN_KEYWORD(+)
-// TOKEN_KEYWORD(+=)
-// TOKEN_KEYWORD(=)
-// TOKEN_KEYWORD(-=)
+// #Const)
+//  TOKEN_KEYWORD(#If…Then…#Else)
+//  TOKEN_KEYWORD(&)
+//  TOKEN_KEYWORD(&=)
+//  TOKEN_KEYWORD(*)
+//  TOKEN_KEYWORD(*=)
+//  TOKEN_KEYWORD(/)
+//  TOKEN_KEYWORD(/=)
+//  TOKEN_KEYWORD(\)
+//  TOKEN_KEYWORD(\=)
+//  TOKEN_KEYWORD(^^=)
+//  TOKEN_KEYWORD(+)
+//  TOKEN_KEYWORD(+=)
+//  TOKEN_KEYWORD(=)
+//  TOKEN_KEYWORD(-=)
 
 // http://www.yaldex.com/vb-net-tutorial-2/library.books24x7.com/book/id_5526/viewer.asp@bookid=5526&chunkid=0941343935.htm
 #define TOKEN_KEYWORD_LIST                                                     \
@@ -58,6 +58,7 @@
     TOKEN_KEYWORD(Close)                                                       \
     TOKEN_KEYWORD(CObj)                                                        \
     TOKEN_KEYWORD(Command)                                                     \
+    TOKEN_KEYWORD(Continue) /* was not included from the beginning */          \
     TOKEN_KEYWORD(Const)                                                       \
     TOKEN_KEYWORD(Count)                                                       \
     TOKEN_KEYWORD(CreateObject)                                                \
