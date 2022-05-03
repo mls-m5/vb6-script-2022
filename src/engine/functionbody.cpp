@@ -15,7 +15,21 @@ int FunctionBody::variableIndex(std::string_view name) const {
 }
 
 void FunctionBody::pushLocalVariable(std::string name, Type t) {
+    for (auto &var : _localVariables) {
+        if (var.first == name) {
+            throw std::logic_error{"variable already exists"};
+        }
+    }
     _localVariables.push_back({std::move(name), t});
+}
+
+void FunctionBody::forgetLocalVariableName(std::string_view name) {
+    for (auto &var : _localVariables) {
+        if (var.first == name) {
+            var.first = ""; // Simple way to forgetting name
+            return;
+        }
+    }
 }
 
 void FunctionBody::pushCommand(const CommandT &command, size_t line) {

@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "codeblock.h"
 #include "engine/function.h"
 #include "functionbody.h"
 #include "lexer.h"
@@ -267,46 +268,61 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
 
     auto expr = IdentifierFuncT{};
 
-    expr = [name](LocalContext &context) -> ValueOrRef {
-        if (auto index = context.functionBody->function()->argumentIndex(name);
-            index != -1) {
-            return {&context.args.at(index).get()};
-        }
-        else if (auto index = context.functionBody->variableIndex(name);
-                 index != -1) {
+    // Local variables are special, we can always know if they exist
+    // And this is important to achieve scope for variables
+    // TODO: Do this for function argumens aswell. But then we need to change so
+    // that the definitions of arguments is added at the beginning of
+    // parseFunction() and not in the end as of now
+    if (auto index = token.currentFunctionBody->variableIndex(name);
+        index != -1) {
+        expr = [index](LocalContext &context) -> ValueOrRef {
             return {&context.localVariables.at(index)};
-        }
-        else if (auto index = context.module->staticVariable(name);
-                 index != -1) {
-            return {&context.module->staticVariables.at(index).second};
-        }
-        else if (auto f = context.function(name)) {
-            // TODO: Cache function pointer
-            return FunctionRef{f};
-        }
-        else if (name == "Me") {
-            if (context.me.typeName() != Type::Class) {
-                throw VBParsingError{
-                    context.currentLocation(),
-                    "Trying to access 'Me' in static context " + name};
+        };
+    }
+    else {
+        // Runtime lookup of variable names
+        expr = [name](LocalContext &context) -> ValueOrRef {
+            if (auto index =
+                    context.functionBody->function()->argumentIndex(name);
+                index != -1) {
+                return {&context.args.at(index).get()};
             }
-            return {context.me};
-        }
-        else if (auto me = context.me.toClass()) {
-            if (auto index = me->getMemberIndex(name); index != -1) {
-                return {&me->get(index)};
+            //            else if (auto index =
+            //            context.functionBody->variableIndex(name);
+            //                     index != -1) {
+            //                return {&context.localVariables.at(index)};
+            //            }
+            else if (auto index = context.module->staticVariable(name);
+                     index != -1) {
+                return {&context.module->staticVariables.at(index).second};
             }
-        }
+            else if (auto f = context.function(name)) {
+                // TODO: Cache function pointer
+                return FunctionRef{f};
+            }
+            else if (name == "Me") {
+                if (context.me.typeName() != Type::Class) {
+                    throw VBParsingError{
+                        context.currentLocation(),
+                        "Trying to access 'Me' in static context " + name};
+                }
+                return {context.me};
+            }
+            else if (auto me = context.me.toClass()) {
+                if (auto index = me->getMemberIndex(name); index != -1) {
+                    return {&me->get(index)};
+                }
+            }
 
-        throw VBParsingError{context.currentLocation(),
-                             "could not find variable " + name};
-    };
+            throw VBParsingError{context.currentLocation(),
+                                 "could not find variable " + name};
+        };
+    }
 
     if (token.content() != ".") {
         return expr;
     }
 
-    // TODO: Remove Parse time type here
     return parseMemberAccessor(token, expr);
 }
 
@@ -550,7 +566,13 @@ void parseLocalVariableDeclaration(TokenPair &token) {
 
     auto type = parseAsStatement(token);
 
-    token.currentFunctionBody->pushLocalVariable(name, type);
+    try {
+        token.currentFunctionBody->pushLocalVariable(name, type);
+    }
+    catch (std::logic_error &e) {
+        throw VBParsingError{token.lastLoc,
+                             "Variable " + name + " already exists"};
+    }
 }
 
 void parseMemberDeclaration(TokenPair &token) {
@@ -693,7 +715,6 @@ void parseStruct(Line *line,
 FunctionBody::CommandT parseIfStatement(Line **line,
                                         TokenPair &token,
                                         NextLineT nextLine) {
-
     auto codeBlock = FunctionBody::CommandT{};
 
     FunctionBody::CommandT elseStatement = {};
@@ -720,7 +741,7 @@ FunctionBody::CommandT parseIfStatement(Line **line,
         },
         false);
 
-    std::cout << token.lastLoc.toString() << std::endl;
+    //    std::cout << token.lastLoc.toString() << std::endl;
 
     if (token.type() != Token::End) {
         elseStatement = parseIfStatement(line, token, nextLine);
@@ -740,6 +761,45 @@ FunctionBody::CommandT parseIfStatement(Line **line,
     };
 }
 
+FunctionBody::CommandT parseForStatement(Line **line,
+                                         TokenPair &token,
+                                         NextLineT nextLine) {
+
+    auto codeBlock = FunctionBody::CommandT{};
+
+    // TODO: For or for each
+    // TODO: Handle variable declaraciton ie add variable and forget name after
+    // scope
+
+    // Example implementation
+    //    auto name = ...;
+
+    //    try {
+    //        token.currentFunctionBody->pushLocalVariable(name, type);
+    //    }
+    //    catch (std::logic_error &e) {
+    //        throw VBParsingError{token.lastLoc,
+    //                             "Variable " + name + " already exists"};
+    //    }
+
+    //    token.currentFunctionBody->forgetLocalVariableName(name);
+
+    token.next();
+
+    codeBlock = parseBlock(
+        line, token, nextLine, [](auto t) { return t == Token::Next; });
+
+    //    return [condition, codeBlock, elseStatement](LocalContext &context) {
+    //        if (condition(context)->toBool()) {
+    //            codeBlock(context);
+    //        }
+    //        else if (elseStatement) {
+    //            elseStatement(context);
+    //        }
+    //    };
+    throw VBParsingError{token.lastLoc, "for loops not implementede yet"};
+}
+
 FunctionBody::CommandT parseBlock(
     Line **line,
     TokenPair &token,
@@ -747,7 +807,8 @@ FunctionBody::CommandT parseBlock(
     std::function<bool(Token::Keyword)> endCondition,
     bool consumeEnd) {
 
-    auto block = std::vector<FunctionBody::CommandT>{};
+    //    auto block = std::vector<FunctionBody::CommandT>{};
+    auto block = CodeBlock{};
 
     for (*line = nextLine(); *line;) {
         token.next();
@@ -765,12 +826,15 @@ FunctionBody::CommandT parseBlock(
         }
 
         if (t == Token::If) {
-            block.push_back(parseIfStatement(line, token, nextLine));
+            block.addCommand(parseIfStatement(line, token, nextLine));
+        }
+        else if (t == Token::For) {
+            block.addCommand(parseForStatement(line, token, nextLine));
         }
         else {
             // TODO: Move line number into the command type
             if (auto command = parseCommand(token)) {
-                block.push_back(std::move(command));
+                block.addCommand(std::move(command));
             }
             *line = nextLine();
         }

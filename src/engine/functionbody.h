@@ -22,6 +22,7 @@ public:
     int variableIndex(std::string_view name) const;
 
     void pushLocalVariable(std::string, Type t);
+    void forgetLocalVariableName(std::string_view);
 
     void pushCommand(const CommandT &t, size_t line);
 
