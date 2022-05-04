@@ -114,6 +114,9 @@ ExpressionT parseExpression(TokenPair &token);
 
 [[nodiscard]] IdentifierFuncT parseWithAccessor(TokenPair &token);
 
+[[nodiscard]] ExpressionT parseFunctionCall(TokenPair &token,
+                                            ExpressionT functionExpression);
+
 void parseAssert(bool condition,
                  const Location &location,
                  std::string_view message = "parsing error") {
@@ -464,19 +467,33 @@ ExpressionT parseExpression(TokenPair &token) {
         return expr;
     }
 
-    switch (token.type()) {
-    case Token::Operator:
-        return parseBinary(expr, token);
-        break;
-    default:
-        return expr;
+    for (;;) {
+        switch (token.type()) {
+        case Token::Operator:
+            expr = parseBinary(expr, token);
+            break;
+        case Token::ParenthesesBegin: {
+            token.next();
+            auto f = parseFunctionCall(token, expr);
+            if (token.type() != Token::ParenthesesEnd) {
+                throw VBParsingError{token.lastLoc,
+                                     "Expected ')' got " + token.content()};
+            }
+            token.next();
+
+            expr = f;
+            break;
+        }
+        default:
+            return expr;
+        }
     }
 }
 
 std::vector<ExpressionT> parseList(TokenPair &token) {
     auto list = std::vector<ExpressionT>{};
 
-    if (!token.first) {
+    if (!token.first || token.type() == Token::ParenthesesEnd) {
         return {};
     }
 
@@ -532,10 +549,11 @@ FunctionArgumentValues evaluateArgumentList(
     return values;
 }
 
-ExpressionT parseMethodCall(TokenPair &token, ExpressionT functionExpression) {
+ExpressionT parseFunctionCall(TokenPair &token,
+                              ExpressionT functionExpression) {
     auto argExpressionList = parseList(token);
 
-    assertEmpty(token);
+    //    assertEmpty(token);
 
     return [functionExpression,
             argExpressionList,
@@ -669,8 +687,6 @@ FunctionBody::CommandT parseAssignment(TokenPair &token,
 
     auto expr = parseExpression(token);
 
-    //    assertEmpty(token);
-
     return [target, expr, isSetStatement](Context &context) {
         auto t = target(context);
         if ((t->typeName() == Type::Class) != isSetStatement) {
@@ -725,7 +741,7 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
                 return parseAssignment(token, identifier, false);
             }
             else {
-                auto f = parseMethodCall(token, identifier);
+                auto f = parseFunctionCall(token, identifier);
                 return [f](Context &context) {
                     f(context);
                     return ReturnT::Standard;

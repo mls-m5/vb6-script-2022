@@ -35,6 +35,12 @@ Token::Keyword getKeyword(std::string name) {
     if (name == ".") {
         return Token::Period;
     }
+    else if (name == "(") {
+        return Token::ParenthesesBegin;
+    }
+    else if (name == ")") {
+        return Token::ParenthesesEnd;
+    }
 
     if (std::isdigit(name.front())) {
         if (name.find('.') != std::string::npos) {

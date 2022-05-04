@@ -18,6 +18,8 @@ struct Token {
         FloatLiteral,
         Operator,
         Period,
+        ParenthesesBegin,
+        ParenthesesEnd,
         TOKEN_KEYWORD_LIST
     };
 #undef TOKEN_KEYWORD
