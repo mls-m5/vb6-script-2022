@@ -773,6 +773,12 @@ void parseStruct(Line *line,
     nextLine();
 }
 
+FunctionBody::CommandT parseSelectCase(Line **line,
+                                       TokenPair &token,
+                                       NextLineT nextLine) {
+    throw VBParsingError{token.lastLoc, "select case not implemented"};
+}
+
 FunctionBody::CommandT parseIfStatement(Line **line,
                                         TokenPair &token,
                                         NextLineT nextLine) {
@@ -1006,6 +1012,9 @@ FunctionBody::CommandT parseBlock(
         }
         else if (t == Token::For) {
             block.addCommand(parseForStatement(line, token, nextLine));
+        }
+        else if (t == Token::Select) {
+            block.addCommand(parseSelectCase(line, token, nextLine));
         }
         else if (t == Token::With) {
             // TODO: Handle this
