@@ -16,7 +16,6 @@ struct Module {
     ~Module() = default;
 
     std::vector<std::shared_ptr<Function>> functions;
-    //    std::vector<std::pair<std::string, Type>> variables;
     std::vector<std::pair<std::string, Value>> staticVariables;
     std::vector<std::pair<std::string, ClassType>> classes;
     std::filesystem::path path;
@@ -27,8 +26,9 @@ struct Module {
         return classType ? ModuleType::Class : ModuleType::Module;
     }
 
-    void addFunction(std::shared_ptr<Function> function) {
+    Function &addFunction(std::shared_ptr<Function> function) {
         functions.push_back(std::move(function));
+        return *functions.back();
     }
 
     std::string name() {

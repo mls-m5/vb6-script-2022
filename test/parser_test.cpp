@@ -67,14 +67,15 @@ End Sub
             return Value{};
         }};
 
-    testModule->addFunction(std::make_unique<Function>(
-        "TestSet",
-        FunctionArguments{{
-            FunctionArgument{Type{Type::Integer}, "x"},
-            FunctionArgument{Type{Type::Integer}, "y"},
-        }},
-        inner,
-        true));
+    testModule
+        ->addFunction(std::make_unique<Function>(
+            "TestSet",
+            FunctionArguments{{
+                FunctionArgument{Type{Type::Integer}, "x"},
+                FunctionArgument{Type{Type::Integer}, "y"},
+            }},
+            true))
+        .body(inner);
 
     auto module = parse(ss, "", context.global.modules);
     context.local.module = module.get();

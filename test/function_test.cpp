@@ -26,8 +26,9 @@ TEST_CASE("basic function call") {
                               FunctionArgument{Type{Type::Integer}, "y"},
                           },
                       },
-                      lambda,
                       true};
+
+    f.body(lambda);
 
     auto args = FunctionArgumentValues{};
     args.push_back({10});

@@ -70,14 +70,15 @@ for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
 
         auto testModule = std::make_shared<Module>();
 
-        testModule->addFunction(std::make_unique<Function>(
-            "Assert",
-            FunctionArguments{{
-                FunctionArgument{Type{Type::Integer}, "x"},
-                FunctionArgument{Type{Type::Integer}, "y"},
-            }},
-            innerAssert,
-            true));
+        testModule
+            ->addFunction(std::make_unique<Function>(
+                "Assert",
+                FunctionArguments{{
+                    FunctionArgument{Type{Type::Integer}, "x"},
+                    FunctionArgument{Type{Type::Integer}, "y"},
+                }},
+                true))
+            .body(innerAssert);
 
         context.global.modules.push_back(testModule);
 

@@ -28,10 +28,9 @@ private:
     bool _isStatic = true;
 
 public:
-    Function(std::string name, FunctionArguments args, FuncT f, bool isStatic)
+    Function(std::string name, FunctionArguments args, bool isStatic)
         : _name{std::move(name)}
         , _arguments{std::move(args)}
-        , _f{f}
         , _isStatic{isStatic} {}
 
     Value call(const FunctionArgumentValues &args,
@@ -53,5 +52,9 @@ public:
             }
         }
         return -1;
+    }
+
+    void body(FuncT f) {
+        _f = f;
     }
 };

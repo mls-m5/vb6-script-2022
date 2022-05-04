@@ -264,6 +264,12 @@ IdentifierFuncT getLocalIdentifier(std::string_view name, FunctionBody *body) {
         };
     }
 
+    if (body->function()->name() == name) {
+        return [](Context &context) -> ValueOrRef {
+            return {&context.returnValue};
+        };
+    }
+
     return {};
 }
 
@@ -526,8 +532,7 @@ FunctionArgumentValues evaluateArgumentList(
     return values;
 }
 
-FunctionBody::CommandT parseMethodCall(TokenPair &token,
-                                       ExpressionT functionExpression) {
+ExpressionT parseMethodCall(TokenPair &token, ExpressionT functionExpression) {
     auto argExpressionList = parseList(token);
 
     assertEmpty(token);
@@ -535,7 +540,7 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token,
     return [functionExpression,
             argExpressionList,
             function = static_cast<const Function *>(nullptr),
-            loc = token.lastLoc](Context &context) mutable -> ReturnT {
+            loc = token.lastLoc](Context &context) mutable -> ValueOrRef {
         auto ref = functionExpression(context).function();
         function = ref.get();
         if (!function) {
@@ -552,9 +557,7 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token,
         auto args = evaluateArgumentList(
             argExpressionList, function->arguments(), context);
 
-        function->call(args, ref.me, context);
-
-        return ReturnT::Standard;
+        return function->call(args, ref.me, context);
     };
 }
 
@@ -722,7 +725,11 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
                 return parseAssignment(token, identifier, false);
             }
             else {
-                return parseMethodCall(token, identifier);
+                auto f = parseMethodCall(token, identifier);
+                return [f](Context &context) {
+                    f(context);
+                    return ReturnT::Standard;
+                };
             }
         }
     }
@@ -1120,6 +1127,9 @@ std::unique_ptr<Function> parseFunction(Line **line,
     auto body = std::make_shared<FunctionBody>();
 
     token.currentFunctionBody = body.get();
+    auto function =
+        std::make_unique<Function>(name, std::move(arguments), isStatic);
+    body->function(function.get());
 
     body->pushCommand(parseBlock(line,
                                  token,
@@ -1135,9 +1145,7 @@ std::unique_ptr<Function> parseFunction(Line **line,
         return body->call(args, me, context);
     };
 
-    auto function =
-        std::make_unique<Function>(name, std::move(arguments), f, isStatic);
-    body->function(function.get());
+    function->body(f);
 
     token.endFunction();
 
@@ -1180,6 +1188,7 @@ std::unique_ptr<Module> parseGlobal(Line *line,
             currentScope = Private;
             break;
         case Token::Sub:
+        case Token::Function:
             module->addFunction(parseFunction(&line, Private, token, nextLine));
             continue;
             break;
@@ -1208,6 +1217,7 @@ std::unique_ptr<Module> parseGlobal(Line *line,
 
         switch (token.first->type()) {
         case Token::Sub:
+        case Token::Function:
             module->addFunction(
                 parseFunction(&line, currentScope, token, nextLine));
             break;
