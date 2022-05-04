@@ -650,8 +650,13 @@ void parseMemberDeclarationList(TokenPair &token) {
 }
 
 FunctionBody::CommandT parseAssignment(TokenPair &token,
-                                       IdentifierFuncT target) {
+                                       IdentifierFuncT target,
+                                       bool isSetStatement = false) {
     auto loc = token.first->loc;
+
+    if (token.content() != "=") {
+        throw VBParsingError{loc, "expected '=' got " + token.content()};
+    }
     token.next();
 
     if (!token) {
@@ -662,8 +667,15 @@ FunctionBody::CommandT parseAssignment(TokenPair &token,
 
     assertEmpty(token);
 
-    return [target, expr](LocalContext &context) {
-        *target(context) = *expr(context);
+    return [target, expr, isSetStatement](LocalContext &context) {
+        auto t = target(context);
+        if ((t->typeName() == Type::Class) != isSetStatement) {
+            throw VBRuntimeError{context.currentLocation(),
+                                 isSetStatement
+                                     ? "using set statement on non object/class"
+                                     : "missing set statement on object/class"};
+        }
+        *t = *expr(context);
         return ReturnT::Standard;
     };
 }
@@ -694,6 +706,11 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         return parseExitStatement(token);
     case Token::Continue:
         return parseContinue(token);
+    case Token::Set: {
+        token.next();
+        return parseAssignment(token, parseIdentifier(token), true);
+    }
+
     case Token::Period:
     case Token::Me:
     case Token::Word: {

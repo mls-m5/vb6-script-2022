@@ -3,7 +3,7 @@
 Sub Main()
 
     Dim A As Class10
-    A = new Class10
+    Set A = new Class10
 
     A.DoStuff 20
 
