@@ -1086,6 +1086,7 @@ std::unique_ptr<Module> parseGlobal(Line *line,
             continue;
             break;
         case Token::Option:
+            line = nextLine();
             continue; // Skip option statements, assume Option Explicit
         case Token::Dim:
             parseMemberDeclaration(token);
