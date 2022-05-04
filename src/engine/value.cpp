@@ -1,6 +1,10 @@
 #include "value.h"
 #include "classinstance.h"
 
+bool Value::operator==(const Value &other) const {
+    return toInteger() == other.toInteger();
+}
+
 Value Value::create(Type type) {
     switch (type.type) {
     case Type::String:

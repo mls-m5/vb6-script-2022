@@ -15,6 +15,8 @@ struct Value {
     Value &operator=(const Value &) = default;
     ~Value() = default;
 
+    bool operator==(const Value &other) const;
+
     Value(IntegerT i)
         : value{i} {}
 

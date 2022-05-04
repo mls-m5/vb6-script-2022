@@ -37,7 +37,6 @@ struct CommandT {
 
 class FunctionBody {
 public:
-    //    using CommandT = std::function<void(Context &)>;
     using CommandT = ::CommandT;
 
 private:

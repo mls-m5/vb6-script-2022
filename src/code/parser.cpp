@@ -775,8 +775,58 @@ void parseStruct(Line *line,
 FunctionBody::CommandT parseSelectCase(Line **line,
                                        TokenPair &token,
                                        NextLineT nextLine) {
+    token.next();
+    if (token.type() != Token::Case) {
+        VBParsingError{token.lastLoc, "expected 'Case' got " + token.content()};
+    }
+    token.next();
+    auto expression = parseExpression(token);
 
-    throw VBParsingError{token.lastLoc, "select case not implemented"};
+    *line = nextLine();
+
+    auto cases = std::vector<std::pair<ExpressionT, CommandT>>{};
+
+    token.next();
+    for (;;) {
+        if (token.type() != Token::Case) {
+            throw VBParsingError{
+                token.lastLoc, "Expected token 'Case'  got " + token.content()};
+        }
+
+        token.next();
+
+        //! Just hope that it happends to be constant
+        cases.push_back({parseExpression(token),
+                         parseBlock(
+                             line,
+                             token,
+                             nextLine,
+                             [](auto token) {
+                                 return token == Token::Case ||
+                                        token == Token::End;
+                             },
+                             false)});
+
+        if (token.type() == Token::End) {
+            break;
+        }
+    }
+
+    *line = nextLine();
+
+    return [expression, cases](Context &context) {
+        auto value = expression(context).get();
+
+        for (auto &c : cases) {
+            if (c.first(context).get() == value) {
+                if (auto ret = c.second(context); ret != ReturnT::Standard) {
+                    return ret;
+                }
+            }
+        }
+
+        return ReturnT::Standard;
+    };
 }
 
 FunctionBody::CommandT parseIfStatement(Line **line,
