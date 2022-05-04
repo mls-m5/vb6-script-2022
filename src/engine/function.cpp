@@ -3,6 +3,6 @@
 
 Value Function::call(const FunctionArgumentValues &args,
                      Value me,
-                     LocalContext &context) const {
+                     Context &context) const {
     return _f(args, me, context);
 }

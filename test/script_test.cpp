@@ -29,7 +29,7 @@ std::vector<std::filesystem::path> parseImports(std::filesystem::path path) {
 TEST_SUIT_BEGIN;
 
 auto innerAssert = Function::FuncT{
-    [&](const FunctionArgumentValues &args, Value, LocalContext &context) {
+    [&](const FunctionArgumentValues &args, Value, Context &context) {
         if (args.size() != 1) {
             throw std::runtime_error{
                 "assert called with wrong number of arguments"};

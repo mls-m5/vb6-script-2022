@@ -3,7 +3,7 @@
 #include "classinstance.h"
 #include "module.h"
 
-LocalContext::LocalContext(GlobalContext &globalContext,
+Context::Context(GlobalContext &globalContext,
                            const std::vector<std::pair<std::string, Type>> vars,
                            FunctionArgumentValues args,
                            Module *module,
@@ -19,7 +19,7 @@ LocalContext::LocalContext(GlobalContext &globalContext,
     this->args = std::move(args);
 }
 
-Location LocalContext::currentLocation() const {
+Location Context::currentLocation() const {
     if (module) {
         return Location{
             line,
@@ -35,7 +35,7 @@ Location LocalContext::currentLocation() const {
     return loc;
 }
 
-const Function *LocalContext::function(std::string_view name) const {
+const Function *Context::function(std::string_view name) const {
     for (auto &m : globalContext.modules) {
         if (auto f = m->function(name)) {
             return f;

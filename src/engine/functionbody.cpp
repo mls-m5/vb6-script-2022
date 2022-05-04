@@ -42,8 +42,8 @@ void FunctionBody::pushCommand(const CommandT &command, size_t line) {
 
 Value FunctionBody::call(const FunctionArgumentValues &args,
                          Value me,
-                         LocalContext &context) const {
-    auto local = LocalContext{
+                         Context &context) const {
+    auto local = Context{
         context.globalContext, _localVariables, args, context.module, me};
 
     local.functionBody = this;

@@ -20,8 +20,8 @@ enum Scope {
 
 using NextTokenT = std::function<std::pair<Token *, Token *>()>;
 using NextLineT = std::function<Line *()>;
-using ExpressionT = std::function<ValueOrRef(LocalContext &)>;
-using IdentifierFuncT = std::function<ValueOrRef(LocalContext &context)>;
+using ExpressionT = std::function<ValueOrRef(Context &)>;
+using IdentifierFuncT = std::function<ValueOrRef(Context &context)>;
 
 // Contains the current state of the parser
 struct TokenPair {
@@ -218,7 +218,7 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token, IdentifierFuncT base) {
     auto loc = token.lastLoc;
     token.next();
 
-    return [base, name, loc](LocalContext &context) -> ValueOrRef {
+    return [base, name, loc](Context &context) -> ValueOrRef {
         // TODO: handle Object type (when that is added)
 
         auto baseVar = base(context);
@@ -259,7 +259,7 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token, IdentifierFuncT base) {
 
 IdentifierFuncT getLocalIdentifier(std::string_view name, FunctionBody *body) {
     if (auto index = body->variableIndex(name); index != -1) {
-        return [index](LocalContext &context) -> ValueOrRef {
+        return [index](Context &context) -> ValueOrRef {
             return {&context.localVariables.at(index)};
         };
     }
@@ -289,7 +289,7 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
     }
     else {
         // Runtime lookup of variable names
-        expr = [name](LocalContext &context) -> ValueOrRef {
+        expr = [name](Context &context) -> ValueOrRef {
             if (auto index =
                     context.functionBody->function()->argumentIndex(name);
                 index != -1) {
@@ -344,7 +344,7 @@ ExpressionT parseNew(TokenPair &token) {
 
     token.next();
 
-    return [classType](LocalContext) -> ValueOrRef {
+    return [classType](Context) -> ValueOrRef {
         return {Value{ClassInstance::create(classType)}};
     };
 }
@@ -386,29 +386,28 @@ ExpressionT parseBinary(ExpressionT first, TokenPair &token) {
     auto opFInt = getOperator<LongT>(op);
     auto opFFloat = getOperator<DoubleT>(op);
 
-    return
-        [first, second, opFInt, opFFloat](LocalContext &context) -> ValueOrRef {
-            auto firstResult = first(context);
-            auto secondResult = second(context);
-            auto type = firstResult->commonType(secondResult->type());
+    return [first, second, opFInt, opFFloat](Context &context) -> ValueOrRef {
+        auto firstResult = first(context);
+        auto secondResult = second(context);
+        auto type = firstResult->commonType(secondResult->type());
 
-            switch (type.type) {
-            case Type::Integer:
-            case Type::Long:
-                return Value{opFInt(firstResult->toInteger(),
-                                    secondResult->toInteger())};
-            case Type::Double:
-            case Type::Single:
-                return Value{
-                    opFFloat(firstResult->toFloat(), secondResult->toFloat())};
-                break;
-            default:
-                break;
-            }
+        switch (type.type) {
+        case Type::Integer:
+        case Type::Long:
+            return Value{
+                opFInt(firstResult->toInteger(), secondResult->toInteger())};
+        case Type::Double:
+        case Type::Single:
+            return Value{
+                opFFloat(firstResult->toFloat(), secondResult->toFloat())};
+            break;
+        default:
+            break;
+        }
 
-            throw VBRuntimeError{context.currentLocation(),
-                                 "could not convert to numeric value"};
-        };
+        throw VBRuntimeError{context.currentLocation(),
+                             "could not convert to numeric value"};
+    };
 }
 
 ExpressionT parseExpression(TokenPair &token) {
@@ -421,17 +420,17 @@ ExpressionT parseExpression(TokenPair &token) {
     switch (keyword) {
     case Token::StringLiteral:
         token.next();
-        expr = [name](LocalContext &) { return ValueOrRef{std::string{name}}; };
+        expr = [name](Context &) { return ValueOrRef{std::string{name}}; };
         break;
     case Token::NumberLiteral:
         token.next();
-        expr = [l = std::stol(name)](LocalContext &) {
+        expr = [l = std::stol(name)](Context &) {
             return ValueOrRef{{LongT{l}}};
         };
         break;
     case Token::FloatLiteral:
         token.next();
-        expr = [i = std::stod(name)](LocalContext &) {
+        expr = [i = std::stod(name)](Context &) {
             return ValueOrRef{{DoubleT{i}}};
         };
         break;
@@ -489,7 +488,7 @@ std::vector<ExpressionT> parseList(TokenPair &token) {
     return list;
 }
 
-Function *lookupFunction(std::string_view name, LocalContext &context) {
+Function *lookupFunction(std::string_view name, Context &context) {
     if (context.module) {
         if (auto f = context.module->function(name)) {
             return f;
@@ -508,7 +507,7 @@ Function *lookupFunction(std::string_view name, LocalContext &context) {
 FunctionArgumentValues evaluateArgumentList(
     const std::vector<ExpressionT> &args,
     const FunctionArguments &functionArgs,
-    LocalContext &context) {
+    Context &context) {
     auto values = FunctionArgumentValues{};
     values.reserve(args.size());
 
@@ -536,7 +535,7 @@ FunctionBody::CommandT parseMethodCall(TokenPair &token,
     return [functionExpression,
             argExpressionList,
             function = static_cast<const Function *>(nullptr),
-            loc = token.lastLoc](LocalContext &context) mutable -> ReturnT {
+            loc = token.lastLoc](Context &context) mutable -> ReturnT {
         auto ref = functionExpression(context).function();
         function = ref.get();
         if (!function) {
@@ -564,7 +563,7 @@ CommandT parseExitStatement(TokenPair &token) {
 
     switch (token.type()) {
     case Token::For:
-        return [](LocalContext) { return ReturnT::ExitFor; };
+        return [](Context) { return ReturnT::ExitFor; };
     default:
         throw VBParsingError{token.lastLoc,
                              "Unexpected token (expected Do | For | Function | "
@@ -578,7 +577,7 @@ CommandT parseContinue(TokenPair &token) {
 
     switch (token.type()) {
     case Token::For:
-        return [](LocalContext) { return ReturnT::ContinueFor; };
+        return [](Context) { return ReturnT::ContinueFor; };
     default:
         throw VBParsingError{token.lastLoc,
                              "Unexpected token (expected Do | For | While) " +
@@ -667,7 +666,7 @@ FunctionBody::CommandT parseAssignment(TokenPair &token,
 
     assertEmpty(token);
 
-    return [target, expr, isSetStatement](LocalContext &context) {
+    return [target, expr, isSetStatement](Context &context) {
         auto t = target(context);
         if ((t->typeName() == Type::Class) != isSetStatement) {
             throw VBRuntimeError{context.currentLocation(),
@@ -690,7 +689,7 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         auto expr = parseExpression(token);
 
         assertEmpty(token);
-        return [expr](LocalContext &context) {
+        return [expr](Context &context) {
             std::cout << expr(context).get().toString() << std::endl; //
             return ReturnT::Standard;
         };
@@ -776,6 +775,7 @@ void parseStruct(Line *line,
 FunctionBody::CommandT parseSelectCase(Line **line,
                                        TokenPair &token,
                                        NextLineT nextLine) {
+
     throw VBParsingError{token.lastLoc, "select case not implemented"};
 }
 
@@ -792,7 +792,7 @@ FunctionBody::CommandT parseIfStatement(Line **line,
     token.next();
     auto condition = [&]() -> ExpressionT {
         if (isElse) {
-            return [](LocalContext &context) -> Value { return true; };
+            return [](Context &context) -> Value { return true; };
         }
         else {
             return parseExpression(token);
@@ -825,7 +825,7 @@ FunctionBody::CommandT parseIfStatement(Line **line,
         *line = nextLine();
     }
 
-    return [condition, codeBlock, elseStatement](LocalContext &context) {
+    return [condition, codeBlock, elseStatement](Context &context) {
         if (condition(context)->toBool()) {
             return codeBlock(context);
         }
@@ -865,7 +865,7 @@ FunctionBody::CommandT parseForStatement(Line **line,
 
         // TODO: Handle variable declaration
 
-        return [codeBlock](LocalContext &context) {
+        return [codeBlock](Context &context) {
             std::cerr << "for each not implemented yet" << std::endl;
             return ReturnT::Standard;
         };
@@ -908,8 +908,7 @@ FunctionBody::CommandT parseForStatement(Line **line,
 
     auto stop = parseExpression(token);
 
-    auto step =
-        ExpressionT{[](LocalContext &) -> ValueOrRef { return Value{1}; }};
+    auto step = ExpressionT{[](Context &) -> ValueOrRef { return Value{1}; }};
 
     if (token.type() == Token::Step) {
         token.next();
@@ -923,8 +922,7 @@ FunctionBody::CommandT parseForStatement(Line **line,
         token.currentFunctionBody->forgetLocalVariableName(name);
     }
 
-    return [start, code, stop, step, variableIdentification](
-               LocalContext &context) {
+    return [start, code, stop, step, variableIdentification](Context &context) {
         auto var = variableIdentification(context);
         auto ret = ReturnT::Standard;
         for (var.get() = *start(context);
@@ -951,7 +949,7 @@ CommandT parseWith(TokenPair &token) {
     token.next();
     auto identifier = parseIdentifier(token);
     token.isWithStatement = true;
-    return [identifier](LocalContext &context) {
+    return [identifier](Context &context) {
         context.with = identifier(context);
         return ReturnT::Standard;
     };
@@ -963,7 +961,7 @@ CommandT parseWith(TokenPair &token) {
 //!     .X = 1  <-- this
 //! End With
 IdentifierFuncT parseWithAccessor(TokenPair &token) {
-    auto withIdentifier = [](LocalContext &context) -> ValueOrRef {
+    auto withIdentifier = [](Context &context) -> ValueOrRef {
         return context.with;
     };
     return parseMemberAccessor(token, withIdentifier);
@@ -1002,7 +1000,7 @@ FunctionBody::CommandT parseBlock(
                 *line = nextLine();
             }
             return //
-                [block = std::move(block)](LocalContext &context) {
+                [block = std::move(block)](Context &context) {
                     return block.run(context);
                 };
         }
@@ -1059,7 +1057,7 @@ std::unique_ptr<Function> parseFunction(Line **line,
 
     Function::FuncT f = [body](const FunctionArgumentValues &args,
                                Value me,
-                               LocalContext &context) -> Value {
+                               Context &context) -> Value {
         return body->call(args, me, context);
     };
 

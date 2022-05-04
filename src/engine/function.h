@@ -19,7 +19,7 @@ struct FunctionArguments : public std::vector<FunctionArgument> {};
 class Function {
 public:
     using FuncT = std::function<Value(
-        const FunctionArgumentValues &, Value me, LocalContext &context)>;
+        const FunctionArgumentValues &, Value me, Context &context)>;
 
 private:
     std::string _name;
@@ -36,7 +36,7 @@ public:
 
     Value call(const FunctionArgumentValues &args,
                Value me,
-               LocalContext &context) const;
+               Context &context) const;
 
     std::string_view name() const {
         return _name;

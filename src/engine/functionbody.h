@@ -12,7 +12,7 @@ enum class ReturnT {
 };
 
 struct CommandT {
-    using FuncT = std::function<ReturnT(LocalContext &)>;
+    using FuncT = std::function<ReturnT(Context &)>;
     FuncT f;
 
     template <typename F>
@@ -26,7 +26,7 @@ struct CommandT {
 
     CommandT() = default;
 
-    ReturnT operator()(LocalContext &context) const {
+    ReturnT operator()(Context &context) const {
         return f(context);
     }
 
@@ -37,7 +37,7 @@ struct CommandT {
 
 class FunctionBody {
 public:
-    //    using CommandT = std::function<void(LocalContext &)>;
+    //    using CommandT = std::function<void(Context &)>;
     using CommandT = ::CommandT;
 
 private:
@@ -60,7 +60,7 @@ public:
 
     Value call(const FunctionArgumentValues &values,
                Value me,
-               LocalContext &context) const;
+               Context &context) const;
 
     void function(Function *function) {
         _function = function;

@@ -13,7 +13,7 @@ struct GlobalContext {
 
 struct Module;
 
-struct LocalContext {
+struct Context {
     std::vector<Value> localVariables;
     FunctionArgumentValues args;
     Value returnValue; // For functions: return value
@@ -23,7 +23,7 @@ struct LocalContext {
     Value me = Value{Type::Class};
     ValueOrRef with = ValueOrRef{Type::Integer};
 
-    LocalContext(GlobalContext &globalContext,
+    Context(GlobalContext &globalContext,
                  const std::vector<std::pair<std::string, Type>> vars = {},
                  FunctionArgumentValues = {},
                  Module *module = nullptr,

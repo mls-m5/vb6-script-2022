@@ -9,7 +9,7 @@ TEST_CASE("basic function call") {
 
     auto lambda = [&](const FunctionArgumentValues &args,
                       Value me,
-                      LocalContext &context) -> Value {
+                      Context &context) -> Value {
         a = args.at(0).get().get<IntegerT>();
         b = args.at(1).get().get<IntegerT>();
         c = args.at(2).get().get<IntegerT>();
@@ -17,7 +17,7 @@ TEST_CASE("basic function call") {
     };
 
     auto global = GlobalContext{};
-    auto context = LocalContext{global};
+    auto context = Context{global};
 
     auto f = Function{"hello",
                       FunctionArguments{
@@ -46,14 +46,14 @@ TEST_CASE("basic function body") {
     auto body = FunctionBody{};
 
     body.pushCommand(
-        [](LocalContext &context) {
+        [](Context &context) {
             context.returnValue = IntegerT{20};
             return ReturnT::Standard;
         },
         0);
 
     auto globalContext = GlobalContext{};
-    auto dummyContext = LocalContext{globalContext};
+    auto dummyContext = Context{globalContext};
 
     auto ret = body.call({}, {}, dummyContext);
 

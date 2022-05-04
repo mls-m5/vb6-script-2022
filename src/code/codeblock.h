@@ -19,7 +19,7 @@ public:
         }
     }
 
-    ReturnT run(LocalContext &context) const {
+    ReturnT run(Context &context) const {
         for (auto &command : _commands) {
             if (auto t = command(context); t != ReturnT::Standard) {
                 return t;

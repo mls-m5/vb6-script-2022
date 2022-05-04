@@ -55,7 +55,7 @@ End Sub
     int arg2Res = -1;
 
     auto inner = Function::FuncT{
-        [&](const FunctionArgumentValues &args, Value, LocalContext &context) {
+        [&](const FunctionArgumentValues &args, Value, Context &context) {
             context.module = testModule.get();
             isCalled = true;
             numArgs = args.size();

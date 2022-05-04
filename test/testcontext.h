@@ -6,7 +6,7 @@
 // Set of stuff to send into function calls
 struct TestContext {
     GlobalContext global;
-    LocalContext local{global};
+    Context local{global};
     FunctionArgumentValues args;
 
     TestContext(Module *module)
