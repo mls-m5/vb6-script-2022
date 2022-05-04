@@ -563,6 +563,7 @@ CommandT parseExitStatement(TokenPair &token) {
 
     switch (token.type()) {
     case Token::For:
+        token.next();
         return [](Context) { return ReturnT::ExitFor; };
     default:
         throw VBParsingError{token.lastLoc,
@@ -577,6 +578,7 @@ CommandT parseContinue(TokenPair &token) {
 
     switch (token.type()) {
     case Token::For:
+        token.next();
         return [](Context) { return ReturnT::ContinueFor; };
     default:
         throw VBParsingError{token.lastLoc,
@@ -650,7 +652,7 @@ void parseMemberDeclarationList(TokenPair &token) {
 
 FunctionBody::CommandT parseAssignment(TokenPair &token,
                                        IdentifierFuncT target,
-                                       bool isSetStatement = false) {
+                                       bool isSetStatement) {
     auto loc = token.first->loc;
 
     if (token.content() != "=") {
@@ -664,7 +666,7 @@ FunctionBody::CommandT parseAssignment(TokenPair &token,
 
     auto expr = parseExpression(token);
 
-    assertEmpty(token);
+    //    assertEmpty(token);
 
     return [target, expr, isSetStatement](Context &context) {
         auto t = target(context);
@@ -717,7 +719,7 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
             auto identifier = parseIdentifier(token);
 
             if (token.content() == "=") {
-                return parseAssignment(token, identifier);
+                return parseAssignment(token, identifier, false);
             }
             else {
                 return parseMethodCall(token, identifier);
@@ -725,8 +727,7 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         }
     }
     case Token::Empty:
-        throw VBParsingError{*token.first,
-                             "unexpected end of line " + token.content()};
+        throw VBParsingError{token.lastLoc, "unexpected end of line"};
     default:
         throw VBParsingError{*token.first,
                              "unexpected command " + token.content()};
@@ -849,15 +850,37 @@ FunctionBody::CommandT parseIfStatement(Line **line,
         }
     }();
 
-    if (false) { // If pedantic...
-        if (!isElse) {
-            if (token.type() != Token::Then) {
-                throw VBParsingError{token.lastLoc,
-                                     "Expected 'Then' after If-statement"};
+    if (!isElse) {
+        if (token.type() == Token::Then) {
+            token.next();
+            if (token) {
+                auto block = parseCommand(token);
+                if (token.type() == Token::Else) {
+                    token.next();
+                    auto elseBlock = parseCommand(token);
+                    *line = nextLine();
+                    return [condition, block, elseBlock](
+                               Context &context) -> ReturnT {
+                        if (condition(context)->toBool()) {
+                            return block(context);
+                        }
+                        else {
+                            return elseBlock(context);
+                        }
+                    };
+                }
+                *line = nextLine();
+                return [condition, block](Context &context) -> ReturnT {
+                    if (condition(context)->toBool()) {
+                        return block(context);
+                    }
+                    return ReturnT::Standard;
+                };
             }
         }
     }
 
+    // TODO: Handle inline if statements
     codeBlock = parseBlock(
         line,
         token,
@@ -1072,6 +1095,7 @@ FunctionBody::CommandT parseBlock(
         else {
             // TODO: Move line number into the command type
             if (auto command = parseCommand(token)) {
+                assertEmpty(token);
                 block.addCommand(std::move(command));
             }
             *line = nextLine();
