@@ -776,6 +776,15 @@ FunctionBody::CommandT parseIfStatement(Line **line,
         }
     }();
 
+    if (false) { // If pedantic...
+        if (!isElse) {
+            if (token.type() != Token::Then) {
+                throw VBParsingError{token.lastLoc,
+                                     "Expected 'Then' after If-statement"};
+            }
+        }
+    }
+
     codeBlock = parseBlock(
         line,
         token,

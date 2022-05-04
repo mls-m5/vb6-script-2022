@@ -4,7 +4,7 @@ Sub Main()
     Dim X as Integer
     X = 0
 
-    If 1
+    If 1 Then
         Assert 1
         X = 1
     Else
@@ -13,16 +13,16 @@ Sub Main()
 
     Assert X
 
-    If 0
+    If 0 Then
         Assert 0
-    ElseIf 1
+    ElseIf 1 Then
         Assert 1
     End If
 
 
-    If 0
+    If 0 Then
         Assert 0
-    ElseIf 1
+    ElseIf 1 Then
         Assert 1
     Else
         Assert 0
