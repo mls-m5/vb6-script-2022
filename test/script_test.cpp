@@ -49,7 +49,7 @@ auto innerAssert = Function::FuncT{
     }};
 
 for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
-    if (it.path().extension() != ".mod") {
+    if (it.path().extension() != ".bas") {
         continue;
     }
 
