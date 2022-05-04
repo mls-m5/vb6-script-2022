@@ -21,6 +21,7 @@ struct LocalContext {
     const class FunctionBody *functionBody = nullptr;
     size_t line = 0;
     Value me = Value{Type::Class};
+    ValueOrRef with = ValueOrRef{Type::Integer};
 
     LocalContext(GlobalContext &globalContext,
                  const std::vector<std::pair<std::string, Type>> vars = {},

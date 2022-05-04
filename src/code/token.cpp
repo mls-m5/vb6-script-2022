@@ -32,6 +32,10 @@ Token::Keyword getKeyword(std::string name) {
         return Token::Operator;
     }
 
+    if (name == ".") {
+        return Token::Period;
+    }
+
     if (std::isdigit(name.front())) {
         if (name.find('.') != std::string::npos) {
             return Token::FloatLiteral;

@@ -9,6 +9,8 @@ struct Value {
     Value() = default;
     Value(Value &&) = default;
     Value(const Value &) = default;
+
+    // TODO: Do so these functions refuses to change type
     Value &operator=(Value &&) = default;
     Value &operator=(const Value &) = default;
     ~Value() = default;
@@ -33,6 +35,11 @@ struct Value {
 
     Value(StructT i)
         : value{std::move(i)} {}
+
+    //! Set operation that also changes the type of the value
+    void forceSet(Value &other) {
+        value = std::move(other.value);
+    }
 
     static Value create(Type type);
 
@@ -61,8 +68,6 @@ struct Value {
     bool toBool() const {
         return toInteger();
     }
-
-    //    Value toType() const;
 
     ClassT toClass() const;
 

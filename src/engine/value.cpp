@@ -63,7 +63,8 @@ LongT Value::toInteger() const {
         return std::stol(get<std::string>());
     case Type::Single:
         return get<SingleT>() + .5;
-    case Type::Double:
+    case Type::Double:;
+
         return get<DoubleT>() + .5;
     case Type::Long:
         return get<LongT>();

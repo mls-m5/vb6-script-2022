@@ -19,6 +19,9 @@ enum Scope {
 };
 
 using NextTokenT = std::function<std::pair<Token *, Token *>()>;
+using NextLineT = std::function<Line *()>;
+using ExpressionT = std::function<ValueOrRef(LocalContext &)>;
+using IdentifierFuncT = std::function<ValueOrRef(LocalContext &context)>;
 
 // Contains the current state of the parser
 struct TokenPair {
@@ -34,18 +37,13 @@ struct TokenPair {
 
     Module *currentModule = nullptr;
     std::vector<std::shared_ptr<Module>> modules;
-
     FunctionBody *currentFunctionBody = nullptr;
+
+    bool isWithStatement;
 
     void endFunction() {
         currentFunctionBody = nullptr;
     }
-
-    //    int localVariable(std::string_view name) {
-    //        auto index = currentFunctionBody->variableIndex(name);
-
-    //        return -1;
-    //    }
 
     TokenPair &next() {
         std::tie(first, second) = f();
@@ -105,9 +103,6 @@ struct TokenPair {
     }
 };
 
-using NextLineT = std::function<Line *()>;
-using ExpressionT = std::function<ValueOrRef(LocalContext &)>;
-using IdentifierFuncT = std::function<ValueOrRef(LocalContext &context)>;
 ExpressionT parseExpression(TokenPair &token);
 
 [[nodiscard]] FunctionBody::CommandT parseBlock(
@@ -116,6 +111,8 @@ ExpressionT parseExpression(TokenPair &token);
     NextLineT nextLine,
     std::function<bool(Token::Keyword)> endCondition,
     bool shouldConsumeEnd = true);
+
+[[nodiscard]] IdentifierFuncT parseWithAccessor(TokenPair &token);
 
 void parseAssert(bool condition,
                  const Location &location,
@@ -272,7 +269,11 @@ IdentifierFuncT getLocalIdentifier(std::string_view name, FunctionBody *body) {
 
 IdentifierFuncT parseIdentifier(TokenPair &token) {
     auto loc = token.first->loc;
-    auto name = token.first->content;
+    auto name = token.content();
+
+    if (token.type() == Token::Period) {
+        return parseWithAccessor(token);
+    }
 
     token.next();
 
@@ -435,6 +436,8 @@ ExpressionT parseExpression(TokenPair &token) {
         };
         break;
 
+    case Token::Me:
+    case Token::Period:
     case Token::Word: {
         auto id = parseIdentifier(token);
         expr = id;
@@ -668,7 +671,7 @@ FunctionBody::CommandT parseAssignment(TokenPair &token,
 //! A command is a line inside a function that starts at the beginning of the
 //! line
 FunctionBody::CommandT parseCommand(TokenPair &token) {
-    switch (token.first->type()) {
+    switch (token.type()) {
     case Token::Print: {
         parseAssert(token.second, *token.first, "expected expression");
         token.next();
@@ -691,6 +694,7 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         return parseExitStatement(token);
     case Token::Continue:
         return parseContinue(token);
+    case Token::Period:
     case Token::Me:
     case Token::Word: {
         {
@@ -704,6 +708,9 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
             }
         }
     }
+    case Token::Empty:
+        throw VBParsingError{*token.first,
+                             "unexpected end of line " + token.content()};
     default:
         throw VBParsingError{*token.first,
                              "unexpected command " + token.content()};
@@ -908,6 +915,28 @@ FunctionBody::CommandT parseForStatement(Line **line,
     throw VBParsingError{token.lastLoc, "for loops not implementede yet"};
 }
 
+CommandT parseWith(TokenPair &token) {
+    token.next();
+    auto identifier = parseIdentifier(token);
+    token.isWithStatement = true;
+    return [identifier](LocalContext &context) {
+        context.with = identifier(context);
+        return ReturnT::Standard;
+    };
+}
+
+//! The stuff that is inside a With-statement
+//! For example
+//! With X
+//!     .X = 1  <-- this
+//! End With
+IdentifierFuncT parseWithAccessor(TokenPair &token) {
+    auto withIdentifier = [](LocalContext &context) -> ValueOrRef {
+        return context.with;
+    };
+    return parseMemberAccessor(token, withIdentifier);
+}
+
 FunctionBody::CommandT parseBlock(
     Line **line,
     TokenPair &token,
@@ -920,6 +949,22 @@ FunctionBody::CommandT parseBlock(
     for (*line = nextLine(); *line;) {
         token.next();
         auto t = token.type();
+
+        if (t == Token::End) {
+            if (token.second && token.second->type() == Token::With) {
+                if (token.isWithStatement) {
+                    token.isWithStatement = false;
+                    *line = nextLine();
+                    continue;
+                }
+                else {
+                    throw VBParsingError{
+                        token.lastLoc,
+                        "'End With' without matching 'With ...'-statement"};
+                }
+            }
+        }
+
         if (endCondition(t)) {
             if (consumeEnd) {
                 *line = nextLine();
@@ -935,6 +980,11 @@ FunctionBody::CommandT parseBlock(
         }
         else if (t == Token::For) {
             block.addCommand(parseForStatement(line, token, nextLine));
+        }
+        else if (t == Token::With) {
+            // TODO: Handle this
+            block.addCommand(parseWith(token));
+            *line = nextLine();
         }
         else {
             // TODO: Move line number into the command type
@@ -1057,6 +1107,10 @@ std::unique_ptr<Module> parseGlobal(Line *line,
         case Token::Word:
             parseMemberDeclaration(token);
             line = nextLine();
+            break;
+
+        case Token::Structure:
+            parseStruct(line, currentScope, token, nextLine);
             break;
 
         default:

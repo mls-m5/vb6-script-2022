@@ -17,6 +17,7 @@ struct Token {
         NumberLiteral,
         FloatLiteral,
         Operator,
+        Period,
         TOKEN_KEYWORD_LIST
     };
 #undef TOKEN_KEYWORD
