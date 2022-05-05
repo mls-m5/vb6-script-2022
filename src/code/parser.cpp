@@ -104,7 +104,7 @@ struct TokenPair {
     }
 };
 
-ExpressionT parseExpression(TokenPair &token, bool ignoreBinary);
+ExpressionT parseExpression(TokenPair &token, bool ignoreBinary = false);
 
 [[nodiscard]] FunctionBody::CommandT parseBlock(
     Line **line,
@@ -132,6 +132,22 @@ void assertEmpty(TokenPair &token) {
                              "Expected end of line, got " + token.content()};
     }
 };
+
+void assertEqual(TokenPair &token,
+                 Token::Keyword type,
+                 const std::string &shownName = "") {
+    if (token.type() != type) {
+        if (shownName.empty()) {
+            throw VBParsingError{token.lastLoc,
+                                 "Unexpected token " + token.content()};
+        }
+        else {
+            throw VBParsingError{token.lastLoc,
+                                 "Expected '" + shownName + "' got " +
+                                     token.content()};
+        }
+    }
+}
 
 Type parseAsStatement(TokenPair &token) {
     auto loc = token.first->loc;
@@ -280,6 +296,12 @@ IdentifierFuncT getLocalIdentifier(std::string_view name, FunctionBody *body) {
 IdentifierFuncT parseIdentifier(TokenPair &token) {
     auto loc = token.first->loc;
     auto name = token.content();
+
+    if (token.type() != Token::Word && token.type() != Token::Me &&
+        token.type() != Token::Period) {
+        throw VBParsingError{token.lastLoc,
+                             "Expected word got " + token.content()};
+    }
 
     if (token.type() == Token::Period) {
         return parseWithAccessor(token);
@@ -479,7 +501,18 @@ ExpressionT parseBinary(ExpressionT first,
     return expr;
 }
 
-ExpressionT parseExpression(TokenPair &token, bool ignoreBinary = false) {
+ExpressionT parseParentheses(TokenPair &token) {
+    token.next();
+
+    auto expr = parseExpression(token);
+
+    assertEqual(token, Token::ParenthesesEnd, ")");
+    token.next();
+
+    return expr;
+}
+
+ExpressionT parseExpression(TokenPair &token, bool ignoreBinary) {
     auto keyword = token.type();
 
     ExpressionT expr;
@@ -504,6 +537,9 @@ ExpressionT parseExpression(TokenPair &token, bool ignoreBinary = false) {
         };
         break;
 
+    case Token::ParenthesesBegin:
+        expr = parseParentheses(token);
+        break;
     case Token::Me:
     case Token::Period:
     case Token::Word: {
