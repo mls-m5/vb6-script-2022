@@ -9,6 +9,6 @@ struct TestContext {
     Context local{global};
     FunctionArgumentValues args;
 
-    TestContext(Module *module)
-        : local{global, {}, {}, module} {}
+    TestContext()
+        : local{global, {}, {}, nullptr} {}
 };

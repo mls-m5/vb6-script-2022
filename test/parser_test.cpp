@@ -13,7 +13,7 @@ Private Sub Main()
 End Sub
 )_"};
 
-    auto context = TestContext{nullptr};
+    auto context = TestContext{};
 
     auto &module = parse(ss, "", context.global);
 
@@ -33,7 +33,7 @@ Private Sub Main()
 End Sub
 )_"};
 
-    auto context = TestContext{nullptr};
+    auto context = TestContext{};
 
     parse(ss, "", context.global);
 }
@@ -47,7 +47,7 @@ Private Sub Main()
 End Sub
 )_"};
 
-    auto context = TestContext{nullptr};
+    auto context = TestContext{};
     auto testModule = std::make_shared<Module>();
     context.global.modules.push_back(testModule);
 

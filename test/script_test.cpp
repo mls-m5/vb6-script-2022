@@ -57,13 +57,12 @@ for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
                                              innerAssert]() -> void {
         std::cout << path << std::endl;
 
-        auto context = TestContext{nullptr};
+        auto context = TestContext{};
 
         auto imports = parseImports(path);
 
         for (auto &import : imports) {
-            //            context.global.modules.push_back(
-            loadModule(import, context.global); //);
+            loadModule(import, context.global);
         }
 
         auto &module = loadModule(path, context.global);
