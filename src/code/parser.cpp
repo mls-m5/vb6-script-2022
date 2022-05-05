@@ -149,8 +149,73 @@ void assertEqual(TokenPair &token,
     }
 }
 
+constexpr auto shorthandCharacters = std::string_view{"%&@!#$"};
+constexpr static auto shorthandTypes = std::array{
+    Type::Integer,
+    Type::Long,
+    Type::Integer, // TODO: Decimial, but not implemented yet
+    Type::Single,
+    Type::Double,
+    Type::String,
+};
+
+bool isShorthandType(char c) {
+    return shorthandCharacters.find(c) != std::string::npos;
+}
+
+Type::TypeName parseShorthandType(TokenPair &token) {
+
+    auto content = token.content();
+    if (content.size() != 1) {
+        throw VBParsingError{token.lastLoc, "unknown type " + token.content()};
+    }
+    auto f = shorthandCharacters.find(content.front());
+
+    if (f == std::string::npos) {
+        throw VBParsingError{token.lastLoc, "unknown type " + token.content()};
+    }
+
+    token.next();
+
+    return shorthandTypes.at(f);
+}
+
+//! 0 -> Not type declaration
+//! 1 -> As statement
+//! 2 -> Shorthand type notation
+int isTypeDeclaration(TokenPair &token) {
+    if (token.type() == Token::As) {
+        return 1;
+    }
+    if (token.type() == Token::Operator) {
+        auto content = token.content();
+        if (content.size() != 1) {
+            return 0;
+        }
+        if (isShorthandType(content.front())) {
+            return 2;
+        }
+    }
+    return 0;
+}
+
+int assertTypeDeclaration(TokenPair &token) {
+    if (auto ret = isTypeDeclaration(token)) {
+        return ret;
+    }
+    throw VBParsingError{
+        token.lastLoc, "Expected type specification for example 'As Integer'"};
+}
+
 Type parseAsStatement(TokenPair &token) {
     auto loc = token.first->loc;
+
+    auto typeSyntax = assertTypeDeclaration(token);
+
+    if (typeSyntax == 2) {
+        return {parseShorthandType(token)};
+    }
+
     token.next();
 
     if (!token.first) {
@@ -213,10 +278,7 @@ FunctionArguments parseArguments(TokenPair &token) {
 
         token.next();
 
-        if (token.type() != Token::As) {
-            throw VBParsingError{token.lastLoc,
-                                 "Expected 'As', got " + token.content()};
-        }
+        //        assertTypeDeclaration(token);
 
         auto type = parseAsStatement(token);
 
@@ -718,10 +780,11 @@ void parseLocalVariableDeclaration(TokenPair &token) {
 
     token.next();
 
-    if (!(token && token.type() == Token::As)) {
-        throw VBParsingError{token.lastLoc,
-                             "Expected 'As' statement got " + token.content()};
-    }
+    //    if (!(token && token.type() == Token::As)) {
+    //        throw VBParsingError{token.lastLoc,
+    //                             "Expected 'As' statement got " +
+    //                             token.content()};
+    //    }
 
     auto type = parseAsStatement(token);
 
@@ -744,11 +807,12 @@ void parseMemberDeclaration(TokenPair &token) {
     auto name = token.content();
 
     token.next();
-    if (token.type() != Token::As) {
+    //    if (token.type() != Token::As) {
 
-        throw VBParsingError{token.lastLoc,
-                             "Expected 'As' statement got " + token.content()};
-    }
+    //        throw VBParsingError{token.lastLoc,
+    //                             "Expected 'As' statement got " +
+    //                             token.content()};
+    //    }
 
     auto type = parseAsStatement(token);
 
@@ -884,10 +948,11 @@ void parseStruct(Line *line,
         auto memberName = token.content();
 
         token.next();
-        if (token.type() != Token::As) {
-            throw VBParsingError{token.lastLoc,
-                                 "Expected As got " + token.content()};
-        }
+        //        if (token.type() != Token::As) {
+        //            throw VBParsingError{token.lastLoc,
+        //                                 "Expected As got " +
+        //                                 token.content()};
+        //        }
 
         auto type = parseAsStatement(token);
 
@@ -1074,7 +1139,7 @@ FunctionBody::CommandT parseForStatement(Line **line,
 
     auto isScopeLocalVariable = false;
 
-    if (token.type() == Token::As) {
+    if (isTypeDeclaration(token)) {
         isScopeLocalVariable = true;
         auto type = parseAsStatement(token);
 

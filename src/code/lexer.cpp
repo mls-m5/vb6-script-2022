@@ -113,9 +113,10 @@ void CodeFile::load(std::istream &stream, std::filesystem::path path) {
 
                 haveSkippedHeader = true;
             }
-            while (getline(stream, line) && (line.rfind("Attribute ") == 0)) {
+            while ((line.rfind("Attribute ") == 0) && getline(stream, line)) {
                 haveSkippedHeader = true;
             };
+            haveSkippedHeader = true;
         }
 
         lines.push_back(splitString(line, l));
