@@ -1,6 +1,7 @@
 #pragma once
 
 #include "value.h"
+#include "vbruntimeerror.h"
 
 struct FunctionRef {
     const class Function *function;
@@ -52,6 +53,9 @@ public:
     }
 
     const FunctionRef &function() {
+        if (value.index() != 2) {
+            throw VBRuntimeError{"expression is not a function"};
+        }
         return std::get<FunctionRef>(value);
     }
 

@@ -242,6 +242,13 @@ Type parseAsStatement(TokenPair &token) {
         return Type{Type::Class, classType};
     }
 
+    if (auto c = token.currentModule->classType.get()) {
+        if (c->name == token.content()) {
+            token.next();
+            return Type{Type::Class, c};
+        }
+    }
+
     throw VBParsingError{token.lastLoc, "No such type: " + token.content()};
 }
 
@@ -833,12 +840,6 @@ void parseMemberDeclaration(TokenPair &token) {
     auto name = token.content();
 
     token.next();
-    //    if (token.type() != Token::As) {
-
-    //        throw VBParsingError{token.lastLoc,
-    //                             "Expected 'As' statement got " +
-    //                             token.content()};
-    //    }
 
     auto type = parseAsStatement(token);
 
@@ -974,11 +975,6 @@ void parseStruct(Line *line,
         auto memberName = token.content();
 
         token.next();
-        //        if (token.type() != Token::As) {
-        //            throw VBParsingError{token.lastLoc,
-        //                                 "Expected As got " +
-        //                                 token.content()};
-        //        }
 
         auto type = parseAsStatement(token);
 
