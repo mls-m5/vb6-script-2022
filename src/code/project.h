@@ -9,7 +9,6 @@ struct Project {
 private:
     void parseProjectFile(std::filesystem::path path);
 
-    void addClass(std::string name, std::filesystem::path path);
     void addModule(std::string name, std::filesystem::path path);
 
     GlobalContext _globalContext;

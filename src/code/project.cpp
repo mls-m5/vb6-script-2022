@@ -41,31 +41,24 @@ void Project::parseProjectFile(std::filesystem::path projectPath) {
         throw std::runtime_error{"could not open file " + projectPath.string()};
     }
 
+    auto moduleList = std::vector<std::filesystem::path>{};
+
     for (std::string line; std::getline(file, line);) {
         auto [first, second] = splitLine(line, '=');
 
-        if (first == "Class") {
+        if (first == "Class" || first == "Module") {
             auto [name, path] = splitLine(second, ';');
 
-            addClass(trim(name), projectPath.parent_path() / trim(path));
-        }
-        else if (first == "Module") {
-            auto [name, path] = splitLine(second, ';');
-
-            addClass(trim(name), projectPath.parent_path() / trim(path));
+            moduleList.push_back(path);
         }
     }
-}
 
-void Project::addClass(std::string name, std::filesystem::path path) {
-    std::cout << "Adding class " << name << " at path " << path << std::endl;
-
-    try {
-        loadModule(path, _globalContext);
+    for (auto &path : moduleList) {
+        prescanModule(path, _globalContext);
     }
-    catch (VBParsingError &e) {
-        std::cerr << e.what() << "\n";
-        throw e;
+
+    for (auto &path : moduleList) {
+        addModule(path.stem(), projectPath.parent_path() / trim(path));
     }
 }
 

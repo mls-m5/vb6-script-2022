@@ -1360,14 +1360,8 @@ Module &parseGlobal(Line *line,
                     NextTokenT nextToken,
                     NextLineT nextLine,
                     std::filesystem::path path,
-                    GlobalContext &global) {
-    auto module = std::make_unique<Module>();
-    module->path = path;
-    if (path.extension() == ".cls") {
-        module->classType = std::make_unique<ClassType>();
-        module->classType->module = module.get();
-        module->classType->name = path.stem();
-    }
+                    GlobalContext &global,
+                    Module &module) {
 
     Scope currentScope;
 
@@ -1375,7 +1369,7 @@ Module &parseGlobal(Line *line,
         currentScope = Private;
         TokenPair token{};
         token.f = nextToken;
-        token.currentModule = module.get();
+        token.currentModule = &module;
         token.next();
         token.modules = &global.modules; // Copy on every line... :)
 
@@ -1393,7 +1387,7 @@ Module &parseGlobal(Line *line,
             break;
         case Token::Sub:
         case Token::Function:
-            module->addFunction(parseFunction(&line, Private, token, nextLine));
+            module.addFunction(parseFunction(&line, Private, token, nextLine));
             continue;
             break;
         case Token::Option:
@@ -1422,7 +1416,7 @@ Module &parseGlobal(Line *line,
         switch (token.first->type()) {
         case Token::Sub:
         case Token::Function:
-            module->addFunction(
+            module.addFunction(
                 parseFunction(&line, currentScope, token, nextLine));
             break;
 
@@ -1442,16 +1436,30 @@ Module &parseGlobal(Line *line,
         }
     }
 
-    global.modules.push_back(std::move(module));
-    return *global.modules.back();
+    return module;
 }
 
 } // namespace
+
+Module &prescanModule(std::filesystem::path path, GlobalContext &global) {
+
+    auto module = std::make_unique<Module>();
+    module->path = path;
+    if (path.extension() == ".cls") {
+        module->classType = std::make_unique<ClassType>();
+        module->classType->module = module.get();
+        module->classType->name = path.stem();
+    }
+
+    global.modules.push_back(std::move(module));
+    return *global.modules.back();
+}
 
 Module &parse(std::istream &stream,
               std::filesystem::path path,
               GlobalContext &global) {
 
+    auto moduleName = path.stem();
     auto f = CodeFile{stream, path};
 
     size_t lineNum = 0;
@@ -1486,7 +1494,16 @@ Module &parse(std::istream &stream,
         };
     };
 
-    return parseGlobal(line, nextToken, nextLine, path, global);
+    auto &module = [&]() -> Module & {
+        for (auto &module : global.modules) {
+            if (module->name() == moduleName) {
+                return *module;
+            }
+        }
+        return prescanModule(path, global);
+    }();
+
+    return parseGlobal(line, nextToken, nextLine, path, global, module);
 }
 
 Module &loadModule(std::filesystem::path path, GlobalContext &global) {
