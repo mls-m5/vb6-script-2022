@@ -15,6 +15,7 @@ add_library(
     src/code/parser.cpp
     src/code/token.cpp
     src/code/parsetypes.cpp
+    src/code/project.cpp
     )
 
 target_compile_features(

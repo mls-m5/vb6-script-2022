@@ -31,6 +31,7 @@ function(test testname)
 endfunction()
 
 file(COPY scripts DESTINATION .)
+file(COPY old-projects/ DESTINATION .)
 
 test(class)
 test(function)
@@ -38,3 +39,4 @@ test(lexer)
 test(parser)
 test(script)
 test(struct)
+test(project)

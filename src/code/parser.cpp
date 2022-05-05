@@ -1404,5 +1404,14 @@ std::unique_ptr<Module> parse(std::istream &stream,
 std::unique_ptr<Module> loadModule(std::filesystem::path path,
                                    const ModuleList &moduleList) {
     auto file = std::ifstream{path};
+
+    if (!file) {
+        throw VBParsingError{
+            Location{
+                .line = 0,
+                .path = std::make_shared<std::filesystem::path>(path),
+            },
+            "Could not load file " + path.string()};
+    }
     return parse(file, path, moduleList);
 }

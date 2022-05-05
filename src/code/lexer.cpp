@@ -93,8 +93,31 @@ void CodeFile::load(std::istream &stream, std::filesystem::path path) {
     int l = 1;
 
     bool shouldMergeLines = false;
+    bool haveSkippedHeader = false;
+    bool isHeader = false;
 
     for (std::string line; getline(stream, line); ++l) {
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        if (!haveSkippedHeader) {
+            if (line.rfind("VERSION ", 0) == 0) {
+                for (; getline(stream, line);) {
+                    if (!line.empty() && line.back() == '\r') {
+                        line.pop_back();
+                    }
+                    if (line == "End" || line == "END") {
+                        break;
+                    }
+                }
+
+                haveSkippedHeader = true;
+            }
+            while (getline(stream, line) && (line.rfind("Attribute ") == 0)) {
+                haveSkippedHeader = true;
+            };
+        }
+
         lines.push_back(splitString(line, l));
 
         if (lines.back().empty()) {
