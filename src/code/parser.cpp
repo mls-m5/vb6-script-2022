@@ -816,19 +816,18 @@ void parseLocalVariableDeclaration(TokenPair &token) {
         throw VBInternalParsingError{*token.first, "no function body"};
     }
 
-    auto name = token.first->content;
-
-    token.next();
-
-    auto type = parseAsStatement(token);
-
-    try {
-        token.currentFunctionBody->pushLocalVariable(name, type);
-    }
-    catch (std::logic_error &e) {
-        throw VBParsingError{token.lastLoc,
-                             "Variable " + name + " already exists"};
-    }
+    do {
+        auto name = token.first->content;
+        token.next();
+        auto type = parseAsStatement(token);
+        try {
+            token.currentFunctionBody->pushLocalVariable(name, type);
+        }
+        catch (std::logic_error &e) {
+            throw VBParsingError{token.lastLoc,
+                                 "Variable " + name + " already exists"};
+        }
+    } while (token.content() == "," && (token.next(), true));
 }
 
 void parseMemberDeclaration(TokenPair &token) {
@@ -1452,7 +1451,7 @@ Module &prescanModule(std::filesystem::path path, GlobalContext &global) {
         module->classType->name = path.stem();
     }
 
-    // TODO: Parse struct names
+    // TODO: Parse struct names, and global functions
 
     global.modules.push_back(std::move(module));
     return *global.modules.back();
