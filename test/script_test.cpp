@@ -62,11 +62,11 @@ for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
         auto imports = parseImports(path);
 
         for (auto &import : imports) {
-            context.global.modules.push_back(
-                loadModule(import, context.global));
+            //            context.global.modules.push_back(
+            loadModule(import, context.global); //);
         }
 
-        auto module = loadModule(path, context.global);
+        auto &module = loadModule(path, context.global);
 
         auto testModule = std::make_shared<Module>();
 
@@ -81,9 +81,9 @@ for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
 
         context.global.modules.push_back(testModule);
 
-        context.local.module = module.get();
+        context.local.module = &module;
 
-        module->function("Main")->call({}, {}, context.local);
+        module.function("Main")->call({}, {}, context.local);
     };
 }
 

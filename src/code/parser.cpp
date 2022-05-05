@@ -1356,11 +1356,11 @@ std::unique_ptr<Function> parseFunction(Line **line,
     return function;
 }
 
-std::unique_ptr<Module> parseGlobal(Line *line,
-                                    NextTokenT nextToken,
-                                    NextLineT nextLine,
-                                    std::filesystem::path path,
-                                    const GlobalContext &global) {
+Module &parseGlobal(Line *line,
+                    NextTokenT nextToken,
+                    NextLineT nextLine,
+                    std::filesystem::path path,
+                    GlobalContext &global) {
     auto module = std::make_unique<Module>();
     module->path = path;
     if (path.extension() == ".cls") {
@@ -1442,14 +1442,15 @@ std::unique_ptr<Module> parseGlobal(Line *line,
         }
     }
 
-    return module;
+    global.modules.push_back(std::move(module));
+    return *global.modules.back();
 }
 
 } // namespace
 
-std::unique_ptr<Module> parse(std::istream &stream,
-                              std::filesystem::path path,
-                              const GlobalContext &global) {
+Module &parse(std::istream &stream,
+              std::filesystem::path path,
+              GlobalContext &global) {
 
     auto f = CodeFile{stream, path};
 
@@ -1488,8 +1489,7 @@ std::unique_ptr<Module> parse(std::istream &stream,
     return parseGlobal(line, nextToken, nextLine, path, global);
 }
 
-std::unique_ptr<Module> loadModule(std::filesystem::path path,
-                                   const GlobalContext &global) {
+Module &loadModule(std::filesystem::path path, GlobalContext &global) {
     auto file = std::ifstream{path};
 
     if (!file) {

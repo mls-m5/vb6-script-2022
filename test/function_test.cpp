@@ -19,14 +19,19 @@ TEST_CASE("basic function call") {
     auto global = GlobalContext{};
     auto context = Context{global};
 
-    auto f = Function{"hello",
-                      FunctionArguments{
-                          {
-                              FunctionArgument{Type{Type::Integer}, "x"},
-                              FunctionArgument{Type{Type::Integer}, "y"},
-                          },
-                      },
-                      true};
+    auto f =
+        Function{"hello",
+                 FunctionArguments{
+                     {
+                         FunctionArgument{Type{Type::Integer}, "x"},
+                         FunctionArgument{Type{Type::Integer}, "y"},
+                         FunctionArgument{Type{Type::Integer},
+                                          "y",
+                                          false,
+                                          [](Context &) { return Value{1}; }},
+                     },
+                 },
+                 true};
 
     f.body(lambda);
 

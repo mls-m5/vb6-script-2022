@@ -15,9 +15,9 @@ End Sub
 
     auto context = TestContext{nullptr};
 
-    auto module = parse(ss, "", context.global);
+    auto &module = parse(ss, "", context.global);
 
-    auto f = module->function("Main");
+    auto f = module.function("Main");
 
     EXPECT(f);
 
@@ -35,7 +35,7 @@ End Sub
 
     auto context = TestContext{nullptr};
 
-    auto module = parse(ss, "", context.global);
+    parse(ss, "", context.global);
 }
 
 TEST_CASE("Call global function") {
@@ -79,10 +79,10 @@ End Sub
             true))
         .body(inner);
 
-    auto module = parse(ss, "", context.global);
-    context.local.module = module.get();
+    auto &module = parse(ss, "", context.global);
+    context.local.module = &module;
 
-    auto f = module->function("Main");
+    auto f = module.function("Main");
 
     EXPECT(f);
 
