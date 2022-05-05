@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "parsetypes.h"
 #include "vbparsingerror.h"
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -103,7 +104,7 @@ struct TokenPair {
     }
 };
 
-ExpressionT parseExpression(TokenPair &token);
+ExpressionT parseExpression(TokenPair &token, bool ignoreBinary);
 
 [[nodiscard]] FunctionBody::CommandT parseBlock(
     Line **line,
@@ -359,43 +360,95 @@ ExpressionT parseNew(TokenPair &token) {
 }
 
 template <typename T>
-std::function<T(T, T)> getOperator(std::string name) {
+std::pair<std::function<T(T, T)>, int> getOperator(std::string name) {
 
-#define DEFINE_BINARY_OPERATOR(x)                                              \
+#define DEFINE_BINARY_OPERATOR(x, precedence)                                  \
     {                                                                          \
-#x, [](T first, T second) -> T { return first x second; }              \
+#x, {                                                                  \
+            [](T first, T second) -> T { return first x second; }, precedence  \
+        }                                                                      \
     }
 
-    static const auto ops = std::map<std::string, std::function<T(T, T)>>{
-        DEFINE_BINARY_OPERATOR(+),
-        DEFINE_BINARY_OPERATOR(-),
-        DEFINE_BINARY_OPERATOR(/),
-        DEFINE_BINARY_OPERATOR(*),
-        DEFINE_BINARY_OPERATOR(<),
-        DEFINE_BINARY_OPERATOR(>),
-        {"=", [](T first, T second) -> T { return first == second; }},
-        {"<>", [](T first, T second) -> T { return first != second; }},
+    //! Precedence
+    //! https://docs.microsoft.com/en-us/dotnet/visual-basic/language-reference/operators/operator-precedence
+
+    static const auto ops = std::map<std::string,
+                                     std::pair<std::function<T(T, T)>, int>>{
+        {"^",
+         {[](T first, T second) -> T { return std::pow(first, second); }, 1}},
+        DEFINE_BINARY_OPERATOR(/, 2),
+        DEFINE_BINARY_OPERATOR(*, 2),
+        {"\\",
+         {[](T first, T second) -> T {
+              return std::round(static_cast<double>(first) / second);
+          },
+          3}},
+        {"Mod",
+         {[](T first, T second) -> T {
+              return std::round(static_cast<LongT>(first) %
+                                static_cast<LongT>(second));
+          },
+          4}},
+        DEFINE_BINARY_OPERATOR(+, 5),
+        DEFINE_BINARY_OPERATOR(-, 5),
+        // Here should string concatenation be
+        {"<<",
+         {[](T first, T second) -> T {
+              return std::round(static_cast<LongT>(first)
+                                << static_cast<LongT>(second));
+          },
+          7}},
+        {">>",
+         {[](T first, T second) -> T {
+              return std::round(static_cast<LongT>(first) >>
+                                static_cast<LongT>(second));
+          },
+          7}},
+        DEFINE_BINARY_OPERATOR(<, 8),
+        DEFINE_BINARY_OPERATOR(>, 8),
+        DEFINE_BINARY_OPERATOR(<=, 8),
+        DEFINE_BINARY_OPERATOR(>=, 8),
+        {"=", {[](T first, T second) -> T { return first == second; }, 8}},
+        {"<>", {[](T first, T second) -> T { return first != second; }, 8}},
+        //            {"Not", {[](T first, T second) -> T { return first !=
+        //            second; }, 9}},
+        {"And", {[](T first, T second) -> T { return first && second; }, 10}},
+        // AndAlso
+        {"Or", {[](T first, T second) -> T { return first || second; }, 11}},
+        {"Xor", {[](T first, T second) -> T { return first != second; }, 21}},
     };
 
     if (auto f = ops.find(name); f != ops.end()) {
         return f->second;
     }
 
-#undef DEFINE_BINARY_OPERATOR
-
     throw VBRuntimeError{"binary operator not implemented: " + name};
+#undef DEFINE_BINARY_OPERATOR
 }
 
-ExpressionT parseBinary(ExpressionT first, TokenPair &token) {
+ExpressionT parseBinary(ExpressionT first,
+                        TokenPair &token,
+                        int previousPrecedence = 1000) {
     auto op = token.content();
 
     token.next();
-    auto second = parseExpression(token);
+
+    auto second = parseExpression(token, true);
+
+    for (; token.type() == Token::Operator;) {
+        auto nextOp = getOperator<LongT>(op);
+        auto precedence = nextOp.second;
+
+        if (precedence < previousPrecedence) {
+            second = parseBinary(first, token, precedence);
+        }
+    }
 
     auto opFInt = getOperator<LongT>(op);
     auto opFFloat = getOperator<DoubleT>(op);
 
-    return [first, second, opFInt, opFFloat](Context &context) -> ValueOrRef {
+    auto expr =
+        [first, second, opFInt, opFFloat](Context &context) -> ValueOrRef {
         auto firstResult = first(context);
         auto secondResult = second(context);
         auto type = firstResult->commonType(secondResult->type());
@@ -403,12 +456,13 @@ ExpressionT parseBinary(ExpressionT first, TokenPair &token) {
         switch (type.type) {
         case Type::Integer:
         case Type::Long:
-            return Value{
-                opFInt(firstResult->toInteger(), secondResult->toInteger())};
+            //        case Type::Boolean:
+            return Value{opFInt.first(firstResult->toInteger(),
+                                      secondResult->toInteger())};
         case Type::Double:
         case Type::Single:
-            return Value{
-                opFFloat(firstResult->toFloat(), secondResult->toFloat())};
+            return Value{opFFloat.first(firstResult->toFloat(),
+                                        secondResult->toFloat())};
             break;
         default:
             break;
@@ -417,9 +471,15 @@ ExpressionT parseBinary(ExpressionT first, TokenPair &token) {
         throw VBRuntimeError{context.currentLocation(),
                              "could not convert to numeric value"};
     };
+
+    if (token.type() == Token::Operator) {
+        return parseBinary(expr, token, previousPrecedence);
+    }
+
+    return expr;
 }
 
-ExpressionT parseExpression(TokenPair &token) {
+ExpressionT parseExpression(TokenPair &token, bool ignoreBinary = false) {
     auto keyword = token.type();
 
     ExpressionT expr;
@@ -469,9 +529,6 @@ ExpressionT parseExpression(TokenPair &token) {
 
     for (;;) {
         switch (token.type()) {
-        case Token::Operator:
-            expr = parseBinary(expr, token);
-            break;
         case Token::ParenthesesBegin: {
             token.next();
             auto f = parseFunctionCall(token, expr);
@@ -484,6 +541,14 @@ ExpressionT parseExpression(TokenPair &token) {
             expr = f;
             break;
         }
+        case Token::Operator:
+            if (!ignoreBinary) {
+                expr = parseBinary(expr, token);
+            }
+            else {
+                return expr;
+            }
+            break;
         default:
             return expr;
         }
