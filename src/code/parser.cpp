@@ -1455,10 +1455,17 @@ Module &prescanModule(std::filesystem::path path, GlobalContext &global) {
     auto module = std::make_unique<Module>();
 
     module->path = path;
-    if (path.extension() == ".cls") {
+    if (path.extension() == ".cls" || path.extension() == ".frm") {
         module->classType = std::make_unique<ClassType>();
         module->classType->module = module.get();
         module->classType->name = path.stem();
+
+        if (path.extension() == ".frm") {
+            module->staticVariables.push_back({
+                module->classType->name,
+                Value{ClassInstance::create(module->classType.get())},
+            });
+        }
     }
 
     // TODO: Parse struct names, and global functions
