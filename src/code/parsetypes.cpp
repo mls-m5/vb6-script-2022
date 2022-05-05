@@ -14,6 +14,7 @@ const Type *parseType(Token::Keyword type) {
     static constexpr auto names = std::array{
         PAIR(Integer),
         PAIR(Long),
+        PAIR(Byte),
         PAIR(Single),
         PAIR(Double),
         PAIR(String),

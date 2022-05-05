@@ -17,6 +17,8 @@ Value Value::create(Type type) {
         return Value{LongT{0}};
     case Type::Integer:
         return Value{IntegerT{0}};
+    case Type::Byte:
+        return Value{ByteT{0}};
     case Type::Class:
         return Value{ClassInstance::create(type.classType)};
     case Type::Struct:
@@ -52,6 +54,8 @@ std::string Value::toString() const {
         return std::to_string(get<LongT>());
     case Type::Integer:
         return std::to_string(get<IntegerT>());
+    case Type::Byte:
+        return std::to_string(get<ByteT>());
     case Type::Class:
         throw VBRuntimeError{"could not convert class to string"};
     case Type::Struct:
@@ -74,6 +78,8 @@ LongT Value::toInteger() const {
         return get<LongT>();
     case Type::Integer:
         return get<IntegerT>();
+    case Type::Byte:
+        return get<ByteT>();
     case Type::Class:
         throw VBRuntimeError{"could not convert class to integer"};
     case Type::Struct:
@@ -94,7 +100,9 @@ DoubleT Value::toFloat() const {
     case Type::Long:
         return get<LongT>();
     case Type::Integer:
-        return get<IntegerT>();
+        return get<LongT>();
+    case Type::Byte:
+        return get<ByteT>();
     case Type::Class:
         throw VBRuntimeError{"could not convert class to integer"};
     case Type::Struct:
@@ -103,24 +111,6 @@ DoubleT Value::toFloat() const {
 
     return {};
 }
-
-// Value Value::toType(Type type) const {
-//     switch (type.type) {
-//     case Type::Integer:
-//     case Type::Long:
-//         return toInteger();
-
-//    case Type::Double:
-//    case Type::Single:
-//        return toFloat();
-
-//        break;
-//    default:
-//        break;
-//    }
-
-//    throw VBRuntimeError{"could not convert to numeric value"};
-//}
 
 ClassT Value::toClass() const {
     if (value.index() == Type::Class) {
@@ -136,7 +126,8 @@ Type Value::commonType(Type other) const {
     if (typeName() == Type::Single || other.type == Type::Single) {
         return {Type::Single};
     }
-    if (typeName() == Type::Long || other.type == Type::Long) {
+    if (typeName() == Type::Long || other.type == Type::Long ||
+        other.type == Type::Byte) {
         return {Type::Long};
     }
     return {Type::Integer};

@@ -9,6 +9,7 @@ class ClassType;
 
 using SingleT = float;
 using DoubleT = double;
+using ByteT = uint8_t;
 using IntegerT = int;
 using LongT = long;
 using ClassT = std::shared_ptr<ClassInstance>;
@@ -43,6 +44,7 @@ struct Type {
     enum TypeName {
         Integer,
         Long,
+        Byte,
         Single,
         Double,
         String,
@@ -57,6 +59,7 @@ struct Type {
 
 using TypeVariantT = std::variant<IntegerT,
                                   LongT,
+                                  ByteT,
                                   float,
                                   double,
                                   std::string,
