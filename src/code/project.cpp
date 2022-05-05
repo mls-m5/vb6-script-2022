@@ -44,12 +44,15 @@ void Project::parseProjectFile(std::filesystem::path projectPath) {
     auto moduleList = std::vector<std::filesystem::path>{};
 
     for (std::string line; std::getline(file, line);) {
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
         auto [first, second] = splitLine(line, '=');
 
         if (first == "Class" || first == "Module") {
             auto [name, path] = splitLine(second, ';');
 
-            moduleList.push_back(path);
+            moduleList.push_back(trim(path));
         }
     }
 

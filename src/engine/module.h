@@ -47,6 +47,7 @@ struct Module {
 
     ClassType *structType(std::string_view name) {
         for (auto &c : classes) {
+            // TODO: Make case insensitive comparison struct
             if (c.first == name) {
                 return &c.second;
             }
@@ -57,6 +58,7 @@ struct Module {
 
     int staticVariable(std::string_view name) {
         for (size_t i = 0; i < staticVariables.size(); ++i) {
+            // TODO: Make case insensitive comparison struct variables
             if (staticVariables.at(i).first == name) {
                 return i;
             }

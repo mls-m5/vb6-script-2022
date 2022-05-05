@@ -4,6 +4,7 @@
 #include "functionbody.h"
 #include "lexer.h"
 #include "parsetypes.h"
+#include "stringutils.h"
 #include "vbparsingerror.h"
 #include <cmath>
 #include <filesystem>
@@ -84,7 +85,7 @@ struct TokenPair {
 
     ClassType *classType(std::string_view name) const {
         for (auto &m : *modules) {
-            if (m->type() == ModuleType::Class && m->name() == name) {
+            if (m->type() == ModuleType::Class && iequals(m->name(), name)) {
                 return m->classType.get();
             }
         }
@@ -243,7 +244,7 @@ Type parseAsStatement(TokenPair &token) {
     }
 
     if (auto c = token.currentModule->classType.get()) {
-        if (c->name == token.content()) {
+        if (iequals(c->name, token.content())) {
             token.next();
             return Type{Type::Class, c};
         }
@@ -1442,14 +1443,16 @@ Module &parseGlobal(Line *line,
 } // namespace
 
 Module &prescanModule(std::filesystem::path path, GlobalContext &global) {
-
     auto module = std::make_unique<Module>();
+
     module->path = path;
     if (path.extension() == ".cls") {
         module->classType = std::make_unique<ClassType>();
         module->classType->module = module.get();
         module->classType->name = path.stem();
     }
+
+    // TODO: Parse struct names
 
     global.modules.push_back(std::move(module));
     return *global.modules.back();
