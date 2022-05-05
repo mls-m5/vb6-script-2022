@@ -1,0 +1,12 @@
+[height]
+32
+[width]
+32
+[max rotation]
+12
+[max rows]
+100
+[total width]
+288
+[total height]
+32

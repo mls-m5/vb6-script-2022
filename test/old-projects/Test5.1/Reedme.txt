@@ -1,0 +1,36 @@
+	Test 5.1
+Test 5.1 är en smått uppgraderad verition av Test 5, som av en ren
+händelse också är ett rymdspel som inte har någon mening över huvud
+taget, förutom att skjuta ner en massa grymma rymdskepp som vill skuta
+ned dig, eller åt minstone ditt skepp.
+ Trots att detta underbara spel inte har någon mening, så har den
+faktiskt något som kan liknas vid regler. Som att när din sköld är
+sönderskjuten exploderar ditt skepp och när du får 105 poäng.
+
+	Kontroller
+Här får nu några nyttiga kontroller som kan vara bra att ha när man
+försöker manuvrera spelet. Rättare sakt så blir det svårt att skuta
+ned en massa skepp utan att ha dem.
+
+	Musen eller något annat alternativt styrdon
+Knapp1:
+ Avfyra promärt vapen av typ laser eller ASCR
+Knapp2:
+ Avfyra sekundärt vapen av typ robotar eller multimissiler
+
+	Tangentbord
+Ctrl:
+ Aktiver eller avaktivera ASCR. Om avakticerad så används standard-lasern
+Return/enter:
+ Aktivera eller avaktivera multimissiler
+Backspace:
+ Aktivera eller avaktivera explosiva robotar
+Vänster eller höger:
+ Helt oviktiga kontroller om man använder musen. Om man inte gör det
+så syr man skeppet till vänster respektive höger med dem.
+Space:
+ Också helt oviktigt... men man avfyrar primärvapnen med den.
+
+	ASCR
+ASCR är ett primärvapen som har ett sikte som är synligt på skärmen. 
+När den är på blir
