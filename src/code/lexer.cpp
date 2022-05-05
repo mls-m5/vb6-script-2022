@@ -19,7 +19,7 @@ CharType getType(char c) {
     if (std::isspace(c)) {
         return Space;
     }
-    else if (std::isalpha(c)) {
+    else if (std::isalpha(c) || c == '_') {
         return Alpha;
     }
     else if (std::isdigit(c)) {
@@ -103,10 +103,13 @@ void CodeFile::load(std::istream &stream, std::filesystem::path path) {
         if (!haveSkippedHeader) {
             if (line.rfind("VERSION ", 0) == 0) {
                 for (; getline(stream, line);) {
+                    ++l;
                     if (!line.empty() && line.back() == '\r') {
                         line.pop_back();
                     }
                     if (line == "End" || line == "END") {
+                        ++l;
+                        getline(stream, line);
                         break;
                     }
                 }
@@ -114,6 +117,7 @@ void CodeFile::load(std::istream &stream, std::filesystem::path path) {
                 haveSkippedHeader = true;
             }
             while ((line.rfind("Attribute ") == 0) && getline(stream, line)) {
+                ++l;
                 haveSkippedHeader = true;
             };
             haveSkippedHeader = true;

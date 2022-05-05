@@ -1,5 +1,6 @@
 #include "project.h"
 #include "parser.h"
+#include "vbparsingerror.h"
 #include <fstream>
 #include <iostream>
 
@@ -42,8 +43,8 @@ void Project::parseProjectFile(std::filesystem::path projectPath) {
 
     for (std::string line; std::getline(file, line);) {
         auto [first, second] = splitLine(line, '=');
-        std::cout << "property " << first << " with value " << second
-                  << std::endl;
+        //        std::cout << "property " << first << " with value " << second
+        //                  << std::endl;
 
         if (first == "Class") {
             auto [name, path] = splitLine(second, ';');
@@ -56,5 +57,11 @@ void Project::parseProjectFile(std::filesystem::path projectPath) {
 void Project::addClass(std::string name, std::filesystem::path path) {
     std::cout << "Adding class " << name << " at path " << path << std::endl;
 
-    loadModule(path, _globalContext.modules);
+    try {
+        loadModule(path, _globalContext.modules);
+    }
+    catch (VBParsingError &e) {
+        std::cerr << e.what() << "\n";
+        throw e;
+    }
 }

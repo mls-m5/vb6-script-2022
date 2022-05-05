@@ -204,7 +204,9 @@ int assertTypeDeclaration(TokenPair &token) {
         return ret;
     }
     throw VBParsingError{
-        token.lastLoc, "Expected type specification for example 'As Integer'"};
+        token.lastLoc,
+        "Expected type specification for example 'As Integer'  got " +
+            token.content()};
 }
 
 Type parseAsStatement(TokenPair &token) {
