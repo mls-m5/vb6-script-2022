@@ -13,9 +13,9 @@ Private Sub Main()
 End Sub
 )_"};
 
-    auto module = parse(ss, "");
+    auto context = TestContext{nullptr};
 
-    auto context = TestContext{module.get()};
+    auto module = parse(ss, "", context.global);
 
     auto f = module->function("Main");
 
@@ -33,7 +33,9 @@ Private Sub Main()
 End Sub
 )_"};
 
-    auto module = parse(ss, "");
+    auto context = TestContext{nullptr};
+
+    auto module = parse(ss, "", context.global);
 }
 
 TEST_CASE("Call global function") {
@@ -77,7 +79,7 @@ End Sub
             true))
         .body(inner);
 
-    auto module = parse(ss, "", context.global.modules);
+    auto module = parse(ss, "", context.global);
     context.local.module = module.get();
 
     auto f = module->function("Main");

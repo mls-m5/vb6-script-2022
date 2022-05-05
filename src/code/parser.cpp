@@ -37,7 +37,7 @@ struct TokenPair {
     Token *second = nullptr;
 
     Module *currentModule = nullptr;
-    std::vector<std::shared_ptr<Module>> modules;
+    const std::vector<std::shared_ptr<Module>> *modules;
     FunctionBody *currentFunctionBody = nullptr;
 
     bool isWithStatement;
@@ -73,7 +73,7 @@ struct TokenPair {
             }
         }
 
-        for (auto &m : modules) {
+        for (auto &m : *modules) {
             if (auto t = m->structType(name)) {
                 return t;
             }
@@ -83,7 +83,7 @@ struct TokenPair {
     }
 
     ClassType *classType(std::string_view name) const {
-        for (auto &m : modules) {
+        for (auto &m : *modules) {
             if (m->type() == ModuleType::Class && m->name() == name) {
                 return m->classType.get();
             }
@@ -93,7 +93,7 @@ struct TokenPair {
     }
 
     Function *function(std::string_view name) const {
-        for (auto &m : modules) {
+        for (auto &m : *modules) {
             if (m->type() == ModuleType::Module) {
                 if (auto f = m->function(name)) {
                     return f;
@@ -1360,7 +1360,7 @@ std::unique_ptr<Module> parseGlobal(Line *line,
                                     NextTokenT nextToken,
                                     NextLineT nextLine,
                                     std::filesystem::path path,
-                                    const ModuleList &moduleList) {
+                                    const GlobalContext &global) {
     auto module = std::make_unique<Module>();
     module->path = path;
     if (path.extension() == ".cls") {
@@ -1377,7 +1377,7 @@ std::unique_ptr<Module> parseGlobal(Line *line,
         token.f = nextToken;
         token.currentModule = module.get();
         token.next();
-        token.modules = moduleList; // Copy on every line... :)
+        token.modules = &global.modules; // Copy on every line... :)
 
         if (!token) {
             line = nextLine();
@@ -1449,7 +1449,7 @@ std::unique_ptr<Module> parseGlobal(Line *line,
 
 std::unique_ptr<Module> parse(std::istream &stream,
                               std::filesystem::path path,
-                              const ModuleList &moduleList) {
+                              const GlobalContext &global) {
 
     auto f = CodeFile{stream, path};
 
@@ -1485,11 +1485,11 @@ std::unique_ptr<Module> parse(std::istream &stream,
         };
     };
 
-    return parseGlobal(line, nextToken, nextLine, path, moduleList);
+    return parseGlobal(line, nextToken, nextLine, path, global);
 }
 
 std::unique_ptr<Module> loadModule(std::filesystem::path path,
-                                   const ModuleList &moduleList) {
+                                   const GlobalContext &global) {
     auto file = std::ifstream{path};
 
     if (!file) {
@@ -1500,5 +1500,5 @@ std::unique_ptr<Module> loadModule(std::filesystem::path path,
             },
             "Could not load file " + path.string()};
     }
-    return parse(file, path, moduleList);
+    return parse(file, path, global);
 }

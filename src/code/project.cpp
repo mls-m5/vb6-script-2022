@@ -49,6 +49,11 @@ void Project::parseProjectFile(std::filesystem::path projectPath) {
 
             addClass(trim(name), projectPath.parent_path() / trim(path));
         }
+        else if (first == "Module") {
+            auto [name, path] = splitLine(second, ';');
+
+            addClass(trim(name), projectPath.parent_path() / trim(path));
+        }
     }
 }
 
@@ -56,7 +61,19 @@ void Project::addClass(std::string name, std::filesystem::path path) {
     std::cout << "Adding class " << name << " at path " << path << std::endl;
 
     try {
-        loadModule(path, _globalContext.modules);
+        loadModule(path, _globalContext);
+    }
+    catch (VBParsingError &e) {
+        std::cerr << e.what() << "\n";
+        throw e;
+    }
+}
+
+void Project::addModule(std::string name, std::filesystem::__cxx11::path path) {
+    std::cout << "Adding module " << name << " at path " << path << std::endl;
+
+    try {
+        loadModule(path, _globalContext);
     }
     catch (VBParsingError &e) {
         std::cerr << e.what() << "\n";
