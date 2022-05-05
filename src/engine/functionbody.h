@@ -9,6 +9,7 @@ enum class ReturnT {
     Return,
     ExitFor,
     ContinueFor,
+    ExitFunction, // Same as exit sub
 };
 
 struct CommandT {

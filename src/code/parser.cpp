@@ -789,6 +789,10 @@ CommandT parseExitStatement(TokenPair &token) {
     case Token::For:
         token.next();
         return [](Context) { return ReturnT::ExitFor; };
+    case Token::Sub:
+    case Token::Function:
+        token.next();
+        return [](Context) { return ReturnT::ExitFunction; };
     default:
         throw VBParsingError{token.lastLoc,
                              "Unexpected token (expected Do | For | Function | "
@@ -922,6 +926,12 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         token.next();
         return parseAssignment(token, parseIdentifier(token), true);
     }
+    case Token::Randomize:
+        token.next();
+        return [](Context &context) {
+            context.globalContext.generator.seed(std::random_device{}());
+            return ReturnT::Standard;
+        };
 
     case Token::Period:
     case Token::Me:

@@ -3,12 +3,15 @@
 #include "functionargument.h"
 #include "value.h"
 #include <map>
+#include <random>
 #include <vector>
 
 struct ModuleList : std::vector<std::shared_ptr<class Module>> {};
 
 struct GlobalContext {
     ModuleList modules;
+
+    std::mt19937_64 generator;
 };
 
 struct Module;
@@ -24,10 +27,10 @@ struct Context {
     ValueOrRef with = ValueOrRef{Type::Integer};
 
     Context(GlobalContext &globalContext,
-                 const std::vector<std::pair<std::string, Type>> vars = {},
-                 FunctionArgumentValues = {},
-                 Module *module = nullptr,
-                 Value me = {});
+            const std::vector<std::pair<std::string, Type>> vars = {},
+            FunctionArgumentValues = {},
+            Module *module = nullptr,
+            Value me = {});
 
     GlobalContext &globalContext;
 
