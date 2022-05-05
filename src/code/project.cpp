@@ -43,8 +43,6 @@ void Project::parseProjectFile(std::filesystem::path projectPath) {
 
     for (std::string line; std::getline(file, line);) {
         auto [first, second] = splitLine(line, '=');
-        //        std::cout << "property " << first << " with value " << second
-        //                  << std::endl;
 
         if (first == "Class") {
             auto [name, path] = splitLine(second, ';');

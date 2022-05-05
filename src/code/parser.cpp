@@ -266,13 +266,19 @@ FunctionArguments parseArguments(TokenPair &token) {
         }
 
         bool byVal = false;
+        bool isOptional = false;
+
+        if (token.type() == Token::Optional) {
+            isOptional = true;
+            token.next();
+        }
 
         if (token.type() == Token::ByVal) {
             byVal = true;
             token.next();
         }
         else if (token.type() == Token::ByRef) {
-            // Vb6 default
+            // Vb6 default, just continue to next
             token.next();
         }
 
@@ -280,11 +286,16 @@ FunctionArguments parseArguments(TokenPair &token) {
 
         token.next();
 
-        //        assertTypeDeclaration(token);
-
         auto type = parseAsStatement(token);
 
-        args.push_back({type, name, !byVal});
+        auto optionalValue = ExpressionT{};
+
+        if (isOptional && token.content() == "=") {
+            token.next();
+            optionalValue = parseExpression(token);
+        }
+
+        args.push_back({type, name, !byVal, optionalValue});
 
         if (token.content() == ",") {
             shouldContinue = true;
@@ -662,12 +673,20 @@ std::vector<ExpressionT> parseList(TokenPair &token) {
         return {};
     }
 
-    list.push_back(parseExpression(token));
+    if (token.content() == ",") {
+        list.emplace_back();
+    }
+    else {
+        list.push_back(parseExpression(token));
+    }
 
     while (token.content() == ",") {
         auto loc = token.first->loc;
         token.next();
-        if (!token.first) {
+        if (token.content() == ",") {
+            list.emplace_back();
+        }
+        else if (!token.first) {
             throw VBParsingError{loc, "expected expression"};
         }
         list.push_back(parseExpression(token));
@@ -703,11 +722,24 @@ FunctionArgumentValues evaluateArgumentList(
         auto &arg = args.at(i);
         auto &funcArg = functionArgs.at(i);
 
-        if (funcArg.isByRef) {
+        if (!arg && funcArg.defaultValue) {
+            values.push_back(funcArg.defaultValue(context));
+        }
+        else if (funcArg.isByRef) {
             values.push_back(arg(context));
         }
         else {
             values.push_back(ValueOrRef{arg(context).get()});
+        }
+    }
+
+    for (size_t i = values.size(); i < functionArgs.size(); ++i) {
+        if (functionArgs.at(i).defaultValue) {
+            values.emplace_back(functionArgs.at(i).defaultValue(context));
+        }
+        else {
+            throw VBRuntimeError{context.currentLocation(),
+                                 "Wrong number of arguments to function"};
         }
     }
 
@@ -717,8 +749,6 @@ FunctionArgumentValues evaluateArgumentList(
 ExpressionT parseFunctionCall(TokenPair &token,
                               ExpressionT functionExpression) {
     auto argExpressionList = parseList(token);
-
-    //    assertEmpty(token);
 
     return [functionExpression,
             argExpressionList,
@@ -781,12 +811,6 @@ void parseLocalVariableDeclaration(TokenPair &token) {
     auto name = token.first->content;
 
     token.next();
-
-    //    if (!(token && token.type() == Token::As)) {
-    //        throw VBParsingError{token.lastLoc,
-    //                             "Expected 'As' statement got " +
-    //                             token.content()};
-    //    }
 
     auto type = parseAsStatement(token);
 
