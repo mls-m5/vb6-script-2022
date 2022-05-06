@@ -84,8 +84,6 @@ LongT Value::toInteger() const {
         return get<IntegerT>();
     case Type::Byte:
         return get<ByteT>();
-        //    case Type::Boolean:
-        //        return get<BoolT>();
     case Type::Class:
         throw VBRuntimeError{"could not convert class to integer"};
     case Type::Struct:
@@ -107,8 +105,6 @@ DoubleT Value::toFloat() const {
         return get<LongT>();
     case Type::Integer:
         return get<IntegerT>();
-        //    case Type::Boolean:
-        //        return get<BoolT>();
     case Type::Byte:
         return get<ByteT>();
     case Type::Class:

@@ -119,6 +119,10 @@ ExpressionT parseExpression(TokenPair &token, bool ignoreBinary = false);
 [[nodiscard]] ExpressionT parseFunctionCall(TokenPair &token,
                                             ExpressionT functionExpression);
 
+[[nodiscard]] ExpressionT parseBinary(ExpressionT first,
+                                      TokenPair &token,
+                                      int previousPrecedence = 1000);
+
 void parseAssert(bool condition,
                  const Location &location,
                  std::string_view message = "parsing error") {
@@ -480,7 +484,8 @@ std::pair<std::function<T(T, T)>, int> getOperator(std::string name) {
     static const auto ops = std::map<std::string,
                                      std::pair<std::function<T(T, T)>, int>>{
         {"^",
-         {[](T first, T second) -> T { return std::pow(first, second); }, 1}},
+         {[](T first, T second) -> T { return std::pow(first, second); }, 0}},
+        // Unary +- -> 1
         DEFINE_BINARY_OPERATOR(/, 2),
         DEFINE_BINARY_OPERATOR(*, 2),
         {"\\",
@@ -515,12 +520,17 @@ std::pair<std::function<T(T, T)>, int> getOperator(std::string name) {
         DEFINE_BINARY_OPERATOR(>=, 8),
         {"=", {[](T first, T second) -> T { return first == second; }, 8}},
         {"<>", {[](T first, T second) -> T { return first != second; }, 8}},
+        {"Is",
+         {[](T first, T second) -> T {
+              throw VBRuntimeError{"Trying to use 'Is' on integer values "};
+          },
+          8}},
         //            {"Not", {[](T first, T second) -> T { return first !=
         //            second; }, 9}},
         {"And", {[](T first, T second) -> T { return first && second; }, 10}},
         // AndAlso
         {"Or", {[](T first, T second) -> T { return first || second; }, 11}},
-        {"Xor", {[](T first, T second) -> T { return first != second; }, 21}},
+        {"Xor", {[](T first, T second) -> T { return first != second; }, 12}},
     };
 
     if (auto f = ops.find(name); f != ops.end()) {
@@ -533,10 +543,30 @@ std::pair<std::function<T(T, T)>, int> getOperator(std::string name) {
 
 ExpressionT parseUnary(TokenPair &token, int previousPrecedence = 1000) {
     auto op = token.content();
-
+    auto opType = token.type();
     token.next();
 
+    auto precedence = [&] {
+        if (op == "+" || op == "-") {
+            return 1;
+        }
+        else if (opType == Token::Not) {
+            return 9;
+        }
+        throw VBParsingError{token.lastLoc, "Not a unary operator"};
+    }();
+
     auto expression = parseExpression(token, true);
+
+    while (isOperator(token.type())) {
+        auto [op, nextPrecedence] = getOperator<LongT>(token.content());
+        if (nextPrecedence < precedence) {
+            expression = parseBinary(expression, token, precedence);
+        }
+        else {
+            break;
+        }
+    }
 
     // TODO: Handle precedence
     if (op == "-") {
@@ -573,7 +603,7 @@ ExpressionT parseUnary(TokenPair &token, int previousPrecedence = 1000) {
 
 ExpressionT parseBinary(ExpressionT first,
                         TokenPair &token,
-                        int previousPrecedence = 1000) {
+                        int previousPrecedence) {
 
     auto expr = ExpressionT{};
     int currentPrecedence = 1000;
@@ -636,7 +666,6 @@ ExpressionT parseBinary(ExpressionT first,
         };
     }
 
-    //    if (token.type() == Token::Operator) {
     if (isOperator(token.type())) {
         return parseBinary(expr, token, currentPrecedence);
     }
