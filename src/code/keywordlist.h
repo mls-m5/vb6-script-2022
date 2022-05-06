@@ -296,6 +296,7 @@
     TOKEN_KEYWORD(True)                                                        \
     TOKEN_KEYWORD(Try)                                                         \
     TOKEN_KEYWORD(TypeName)                                                    \
+    TOKEN_KEYWORD(Type) /* Not included by default */                          \
     TOKEN_KEYWORD(TypeOf)                                                      \
     TOKEN_KEYWORD(UBound)                                                      \
     TOKEN_KEYWORD(UCase)                                                       \

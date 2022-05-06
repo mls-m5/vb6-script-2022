@@ -1518,6 +1518,7 @@ Module &parseGlobal(Line *line,
             line = nextLine();
             continue;
         case Token::Structure:
+        case Token::Type:
             parseStruct(line, currentScope, token, nextLine);
             continue;
         default:
@@ -1546,6 +1547,7 @@ Module &parseGlobal(Line *line,
             break;
 
         case Token::Structure:
+        case Token::Type:
             parseStruct(line, currentScope, token, nextLine);
             break;
 
