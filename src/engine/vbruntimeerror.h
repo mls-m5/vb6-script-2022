@@ -3,7 +3,7 @@
 #include "Location.h"
 #include <stdexcept>
 
-class VBRuntimeError : std::runtime_error {
+class VBRuntimeError : public std::runtime_error {
 public:
     VBRuntimeError(const std::string str)
         : std::runtime_error{str} {}

@@ -22,7 +22,7 @@ Value Value::create(Type type) {
         //    case Type::Boolean:
         //        return Value{BoolT{0}};
     case Type::Class:
-        return Value{ClassInstance::create(type.classType)};
+        return Value{ClassT{}};
     case Type::Struct:
         return Value{StructT{type.classType}};
     }

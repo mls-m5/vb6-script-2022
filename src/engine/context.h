@@ -11,7 +11,11 @@ struct ModuleList : std::vector<std::shared_ptr<class Module>> {};
 struct GlobalContext {
     ModuleList modules;
 
+    std::unique_ptr<ClassType> nothingType;
+
     std::mt19937_64 generator;
+
+    GlobalContext();
 };
 
 struct Module;

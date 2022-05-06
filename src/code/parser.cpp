@@ -574,51 +574,67 @@ ExpressionT parseUnary(TokenPair &token, int previousPrecedence = 1000) {
 ExpressionT parseBinary(ExpressionT first,
                         TokenPair &token,
                         int previousPrecedence = 1000) {
-    auto opFInt = getOperator<LongT>(token.content());
-    auto opFFloat = getOperator<DoubleT>(token.content());
 
-    auto currentPrecedence = opFInt.second;
+    auto expr = ExpressionT{};
+    int currentPrecedence = 1000;
+
+    auto content = token.content();
+    auto currentType = token.type();
 
     token.next();
 
     auto second = parseExpression(token, true);
 
-    for (; token.type() == Token::Operator;) {
-        auto nextOp = getOperator<LongT>(token.content());
-        auto nextPrecedence = nextOp.second;
-
-        if (nextPrecedence < currentPrecedence) {
-            second = parseBinary(second, token, currentPrecedence);
-        }
-        else {
-            break;
-        }
+    if (currentType == Token::Is) {
+        expr = [first, second](Context &context) -> ValueOrRef {
+            auto val1 = first(context).get();
+            auto val2 = second(context).get();
+            return Value{val1.get<ClassT>() == val2.get<ClassT>()};
+        };
     }
+    else {
 
-    auto expr =
-        [first, second, opFInt, opFFloat](Context &context) -> ValueOrRef {
-        auto firstResult = first(context);
-        auto secondResult = second(context);
-        auto type = firstResult->commonType(secondResult->type());
+        auto opFInt = getOperator<LongT>(content);
+        auto opFFloat = getOperator<DoubleT>(content);
 
-        switch (type.type) {
-        case Type::Integer:
-        case Type::Long:
-            //        case Type::Boolean:
-            return Value{opFInt.first(firstResult->toInteger(),
-                                      secondResult->toInteger())};
-        case Type::Double:
-        case Type::Single:
-            return Value{opFFloat.first(firstResult->toFloat(),
-                                        secondResult->toFloat())};
-            break;
-        default:
-            break;
+        currentPrecedence = opFInt.second;
+
+        for (; token.type() == Token::Operator;) {
+            auto nextOp = getOperator<LongT>(token.content());
+            auto nextPrecedence = nextOp.second;
+
+            if (nextPrecedence < currentPrecedence) {
+                second = parseBinary(second, token, currentPrecedence);
+            }
+            else {
+                break;
+            }
         }
 
-        throw VBRuntimeError{context.currentLocation(),
-                             "could not convert to numeric value"};
-    };
+        expr =
+            [first, second, opFInt, opFFloat](Context &context) -> ValueOrRef {
+            auto firstResult = first(context);
+            auto secondResult = second(context);
+            auto type = firstResult->commonType(secondResult->type());
+
+            switch (type.type) {
+            case Type::Integer:
+            case Type::Long:
+                return Value{opFInt.first(firstResult->toInteger(),
+                                          secondResult->toInteger())};
+            case Type::Double:
+            case Type::Single:
+                return Value{opFFloat.first(firstResult->toFloat(),
+                                            secondResult->toFloat())};
+                break;
+            default:
+                break;
+            }
+
+            throw VBRuntimeError{context.currentLocation(),
+                                 "could not convert to numeric value"};
+        };
+    }
 
     //    if (token.type() == Token::Operator) {
     if (isOperator(token.type())) {
@@ -670,6 +686,15 @@ ExpressionT parseExpression(TokenPair &token, bool ignoreBinary) {
     case Token::Operator:
     case Token::Not:
         expr = parseUnary(token);
+        break;
+    case Token::Nothing:
+        expr = [](Context &context) {
+            return Value::create(Type{
+                Type::Class,
+                context.globalContext.nothingType.get(),
+            });
+        };
+        token.next();
         break;
     case Token::Me:
     case Token::Period:

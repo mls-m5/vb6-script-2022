@@ -1,13 +1,14 @@
 #include "context.h"
 #include "Location.h"
 #include "classinstance.h"
+#include "classtype.h"
 #include "module.h"
 
 Context::Context(GlobalContext &globalContext,
-                           const std::vector<std::pair<std::string, Type>> vars,
-                           FunctionArgumentValues args,
-                           Module *module,
-                           Value me)
+                 const std::vector<std::pair<std::string, Type>> vars,
+                 FunctionArgumentValues args,
+                 Module *module,
+                 Value me)
     : globalContext{globalContext}
     , module{module}
     , me{me} {
@@ -44,3 +45,6 @@ const Function *Context::function(std::string_view name) const {
 
     return module->function(name);
 }
+
+GlobalContext::GlobalContext()
+    : nothingType{std::make_unique<ClassType>()} {}

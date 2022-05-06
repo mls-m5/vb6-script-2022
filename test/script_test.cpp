@@ -4,6 +4,7 @@
 #include "mls-unit-test/unittest.h"
 #include "parser.h"
 #include "testcontext.h"
+#include "vbparsingerror.h"
 #include <filesystem>
 #include <fstream>
 
@@ -65,7 +66,15 @@ for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
             loadModule(import, context.global);
         }
 
-        auto &module = loadModule(path, context.global);
+        auto &module = [&]() -> Module & {
+            try {
+                return loadModule(path, context.global);
+            }
+            catch (VBParsingError &e) {
+                std::cout << e.what() << std::endl;
+                throw e;
+            }
+        }();
 
         auto testModule = std::make_shared<Module>();
 
@@ -82,7 +91,17 @@ for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
 
         context.local.module = &module;
 
-        module.function("Main")->call({}, {}, context.local);
+        try {
+            module.function("Main")->call({}, {}, context.local);
+        }
+        catch (VBRuntimeError &e) {
+            std::cout << e.what() << std::endl;
+            throw e;
+        }
+        catch (std::runtime_error &e) {
+            std::cout << e.what() << std::endl;
+            throw e;
+        }
     };
 }
 
