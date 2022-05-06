@@ -32,6 +32,9 @@ struct Value {
     Value(LongT l)
         : value{l} {}
 
+    //    Value(BoolT l)
+    //        : value{l} {}
+
     Value(ClassT i)
         : value{std::move(i)} {}
 

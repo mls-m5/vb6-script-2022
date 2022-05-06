@@ -82,3 +82,18 @@ bool Token::operator==(std::string_view str) {
 Token::Keyword Token::type() const {
     return getKeyword(content);
 }
+
+bool isOperator(Token::Keyword keyword) {
+    switch (keyword) {
+    case Token::Operator:
+    case Token::Not:
+    case Token::And:
+    case Token::Xor:
+    case Token::Or:
+    case Token::TypeOf:
+    case Token::Is:
+        return true;
+    default:
+        return false;
+    }
+}

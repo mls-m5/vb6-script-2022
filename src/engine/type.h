@@ -12,6 +12,7 @@ using DoubleT = double;
 using ByteT = uint8_t;
 using IntegerT = int;
 using LongT = long;
+using BoolT = long;
 using ClassT = std::shared_ptr<ClassInstance>;
 
 struct StructT {
@@ -45,6 +46,7 @@ struct Type {
         Integer,
         Long,
         Byte,
+        //        Boolean,
         Single,
         Double,
         String,
@@ -60,6 +62,7 @@ struct Type {
 using TypeVariantT = std::variant<IntegerT,
                                   LongT,
                                   ByteT,
+                                  //                                  BoolT,
                                   float,
                                   double,
                                   std::string,

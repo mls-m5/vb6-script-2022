@@ -18,6 +18,7 @@ const Type *parseType(Token::Keyword type) {
         PAIR(Single),
         PAIR(Double),
         PAIR(String),
+        std::pair{Token::Boolean, Type{Type::Integer}},
     };
 
     for (auto &s : names) {

@@ -42,3 +42,5 @@ struct Token {
 };
 
 struct Line : std::vector<Token> {};
+
+bool isOperator(Token::Keyword);

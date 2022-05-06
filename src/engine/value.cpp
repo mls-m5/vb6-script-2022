@@ -19,13 +19,15 @@ Value Value::create(Type type) {
         return Value{IntegerT{0}};
     case Type::Byte:
         return Value{ByteT{0}};
+        //    case Type::Boolean:
+        //        return Value{BoolT{0}};
     case Type::Class:
         return Value{ClassInstance::create(type.classType)};
     case Type::Struct:
         return Value{StructT{type.classType}};
     }
 
-    return {};
+    throw VBRuntimeError{"invalid type"};
 }
 
 Type Value::type() const {
@@ -56,6 +58,8 @@ std::string Value::toString() const {
         return std::to_string(get<IntegerT>());
     case Type::Byte:
         return std::to_string(get<ByteT>());
+        //    case Type::Boolean:
+        //        return std::to_string(get<BoolT>());
     case Type::Class:
         throw VBRuntimeError{"could not convert class to string"};
     case Type::Struct:
@@ -80,6 +84,8 @@ LongT Value::toInteger() const {
         return get<IntegerT>();
     case Type::Byte:
         return get<ByteT>();
+        //    case Type::Boolean:
+        //        return get<BoolT>();
     case Type::Class:
         throw VBRuntimeError{"could not convert class to integer"};
     case Type::Struct:
@@ -100,7 +106,9 @@ DoubleT Value::toFloat() const {
     case Type::Long:
         return get<LongT>();
     case Type::Integer:
-        return get<LongT>();
+        return get<IntegerT>();
+        //    case Type::Boolean:
+        //        return get<BoolT>();
     case Type::Byte:
         return get<ByteT>();
     case Type::Class:
@@ -160,6 +168,8 @@ Value Value::negative() const {
         return -get<LongT>();
     case Type::Integer:
         return -get<IntegerT>();
+        //    case Type::Boolean:
+        //        return get<BoolT>();
     case Type::Byte:
         return -get<ByteT>();
     case Type::Class:

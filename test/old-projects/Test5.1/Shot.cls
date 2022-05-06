@@ -11,7 +11,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-Dim i As IPictureDisp, W As Integer
+'Dim i As IPictureDisp, W As Integer
 Public Range%, num As Byte, xSpeed&, ySpeed&, X&, Y&, FromEx As Long, Target As Ship
 
 Public Sub Display()
@@ -26,8 +26,8 @@ Public Sub Display()
 End Sub
 
 Private Sub Class_Initialize()
-    Set i = frmScreen.Image2
-    W = i.Width / 2
+'    Set i = frmScreen.Image2
+'    W = i.Width / 2
     frmScreen.CreateShot Me
 End Sub
 

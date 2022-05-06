@@ -620,10 +620,8 @@ ExpressionT parseBinary(ExpressionT first,
                              "could not convert to numeric value"};
     };
 
-    if (token.type() ==
-        Token::Operator // &&
-                        //        currentPrecedence >= previousPrecedence
-    ) {
+    //    if (token.type() == Token::Operator) {
+    if (isOperator(token.type())) {
         return parseBinary(expr, token, currentPrecedence);
     }
 
@@ -670,6 +668,7 @@ ExpressionT parseExpression(TokenPair &token, bool ignoreBinary) {
         expr = parseParentheses(token);
         break;
     case Token::Operator:
+    case Token::Not:
         expr = parseUnary(token);
         break;
     case Token::Me:
@@ -681,6 +680,14 @@ ExpressionT parseExpression(TokenPair &token, bool ignoreBinary) {
 
     case Token::New:
         expr = parseNew(token);
+        break;
+    case Token::True:
+        expr = [](auto &context) { return ValueOrRef{true}; };
+        token.next();
+        break;
+    case Token::False:
+        expr = [](auto &context) { return ValueOrRef{false}; };
+        token.next();
         break;
     default:
         throw VBParsingError{token.lastLoc,
@@ -696,6 +703,14 @@ ExpressionT parseExpression(TokenPair &token, bool ignoreBinary) {
     }
 
     for (;;) {
+        if (isOperator(token.type())) {
+            if (!ignoreBinary) {
+                expr = parseBinary(expr, token);
+            }
+            else {
+                return expr;
+            }
+        }
         switch (token.type()) {
         case Token::ParenthesesBegin: {
             token.next();
@@ -709,14 +724,6 @@ ExpressionT parseExpression(TokenPair &token, bool ignoreBinary) {
             expr = f;
             break;
         }
-        case Token::Operator:
-            if (!ignoreBinary) {
-                expr = parseBinary(expr, token);
-            }
-            else {
-                return expr;
-            }
-            break;
         default:
             return expr;
         }
