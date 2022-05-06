@@ -536,7 +536,7 @@ ExpressionT parseUnary(TokenPair &token, int previousPrecedence = 1000) {
 
     token.next();
 
-    auto expression = parseExpression(token);
+    auto expression = parseExpression(token, true);
 
     // TODO: Handle precedence
     if (op == "-") {
