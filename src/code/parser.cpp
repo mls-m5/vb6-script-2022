@@ -343,10 +343,10 @@ IdentifierFuncT parseMemberAccessor(TokenPair &token, IdentifierFuncT base) {
                                      "not struct or class)"};
             }
 
-            auto s = type.type == Type::Struct ? baseVar->get<StructT>().get()
-                                               : baseVar->get<ClassT>().get();
+            auto s = (type.type == Type::Struct) ? baseVar->get<StructT>().get()
+                                                 : baseVar->get<ClassT>().get();
 
-            return {&s->get(memberIndex)};
+            return ValueOrRef{&s->get(memberIndex)};
         }
 
         // TODO: Cache function
@@ -437,11 +437,11 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
         };
     }
 
-    if (token.content() != ".") {
-        return expr;
+    while (token.type() == Token::Period) {
+        expr = parseMemberAccessor(token, expr);
     }
 
-    return parseMemberAccessor(token, expr);
+    return expr;
 }
 
 ExpressionT parseNew(TokenPair &token) {

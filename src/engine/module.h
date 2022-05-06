@@ -17,7 +17,7 @@ struct Module {
 
     std::vector<std::shared_ptr<Function>> functions;
     std::vector<std::pair<std::string, Value>> staticVariables;
-    std::vector<std::pair<std::string, ClassType>> classes;
+    std::vector<std::shared_ptr<ClassType>> classes;
     std::filesystem::path path;
 
     std::unique_ptr<ClassType> classType;
@@ -48,8 +48,8 @@ struct Module {
     ClassType *structType(std::string_view name) {
         for (auto &c : classes) {
             // TODO: Make case insensitive comparison struct
-            if (c.first == name) {
-                return &c.second;
+            if (c->name == name) {
+                return c.get();
             }
         }
 
@@ -68,8 +68,10 @@ struct Module {
     }
 
     ClassType &addStruct(std::string name) {
-        classes.push_back({name, {}});
-        classes.back().second.isStruct = true;
-        return classes.back().second;
+        classes.push_back(std::make_shared<ClassType>());
+        auto &s = *classes.back();
+        s.name = name;
+        s.isStruct = true;
+        return s;
     }
 };

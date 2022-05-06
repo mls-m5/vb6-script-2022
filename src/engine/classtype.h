@@ -19,6 +19,12 @@ public:
     struct Module *module = nullptr;
     bool isStruct = false;
 
+    ClassType() = default;
+    ClassType(const ClassType &) = delete;
+    ClassType(ClassType &&) = default;
+    ClassType &operator=(const ClassType &) = delete;
+    ClassType &operator=(ClassType &&) = default;
+
     ~ClassType();
 
     void addAddVariable(std::string name, Type variable) {

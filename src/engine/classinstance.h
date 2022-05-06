@@ -8,7 +8,10 @@ class ClassInstance {
     // Use public function create to create
     ClassInstance(ClassType *type)
         : _type{type} {
-        _memberValues.resize(type->variables.size());
+        _memberValues.reserve(type->variables.size());
+        for (auto &t : type->variables) {
+            _memberValues.emplace_back(Value::create(t.type));
+        }
     }
 
     ClassInstance(ClassType *type, std::vector<Value> values)
