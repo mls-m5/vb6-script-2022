@@ -725,6 +725,13 @@ ExpressionT parseExpression(TokenPair &token, bool ignoreBinary) {
         };
         token.next();
         break;
+    case Token::Rnd:
+        expr = [](Context &context) -> ValueOrRef {
+            return Value{std::uniform_real_distribution<double>(0, 1)(
+                context.globalContext.generator)};
+        };
+        token.next();
+        break;
     case Token::Me:
     case Token::Period:
     case Token::Word: {
@@ -1042,7 +1049,6 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
             context.globalContext.generator.seed(std::random_device{}());
             return ReturnT::Standard;
         };
-
     case Token::Period:
     case Token::Me:
     case Token::Word: {
