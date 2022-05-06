@@ -1,7 +1,18 @@
 #include "lexer.h"
+#include <array>
 #include <fstream>
 
 namespace {
+
+using namespace std::literals;
+
+auto multiCharOperators = std::array{
+    "<="sv,
+    "<<"sv,
+    ">>"sv,
+    ">="sv,
+    "<>"sv,
+};
 
 enum CharType {
     None,
@@ -28,6 +39,15 @@ CharType getType(char c) {
     else {
         return Operator;
     }
+}
+
+bool isMultiCharOperator(std::string_view op) {
+    for (auto multiChar : multiCharOperators) {
+        if (multiChar == op) {
+            return true;
+        }
+    }
+    return false;
 }
 
 Line splitString(std::string str, size_t lineNum) {
@@ -65,9 +85,16 @@ Line splitString(std::string str, size_t lineNum) {
             line.back().content.push_back(c);
             continue;
         }
-        else if (type != lastType || type == Operator) {
-            // TODO: Handle multi char operators
+        else if (type != lastType) {
             line.push_back(Token{std::string{c}, lineNum});
+        }
+        else if (type == Operator) {
+            if (isMultiCharOperator(line.back().content + c)) {
+                line.back().content.push_back(c);
+            }
+            else {
+                line.push_back(Token{std::string{c}, lineNum});
+            }
         }
         else {
             line.back().content.push_back(c);

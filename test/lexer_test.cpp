@@ -92,4 +92,12 @@ TEST_CASE("floating point numbers") {
     EXPECT_EQ(f.lines.front().size(), 1);
 }
 
+TEST_CASE("multi-char operators") {
+    auto ss = std::stringstream{" << <= <> "};
+
+    const auto f = CodeFile{ss, ""};
+    EXPECT_EQ(f.lines.size(), 1);
+    EXPECT_EQ(f.lines.front().size(), 3);
+}
+
 TEST_SUIT_END
