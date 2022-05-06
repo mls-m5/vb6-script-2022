@@ -1,0 +1,2 @@
+
+Public X As Integer

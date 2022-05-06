@@ -91,6 +91,8 @@ for (auto &it : std::filesystem::recursive_directory_iterator{"scripts"}) {
 
         context.local.module = &module;
 
+        module.init();
+
         try {
             module.function("Main")->call({}, {}, context.local);
         }

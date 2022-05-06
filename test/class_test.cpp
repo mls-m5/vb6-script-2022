@@ -7,7 +7,7 @@ TEST_SUIT_BEGIN
 
 TEST_CASE("instantiate class") {
     auto c = ClassType{};
-    c.addAddVariable("x", Type{Type::Integer});
+    c.addAddVariable("x", Type{Type::Integer}, false);
 
     auto i = ClassInstance::create(&c);
     i->set("x", IntegerT{130});

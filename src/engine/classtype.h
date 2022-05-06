@@ -8,6 +8,7 @@
 struct MemberVariable {
     std::string name;
     Type type;
+    bool shouldCreateNew = false;
 };
 
 class Function;
@@ -27,10 +28,11 @@ public:
 
     ~ClassType();
 
-    void addAddVariable(std::string name, Type variable) {
+    void addAddVariable(std::string name, Type type, bool shouldCreateNew) {
         variables.push_back(MemberVariable{
-            std::move(name),
-            std::move(variable),
+            .name = std::move(name),
+            .type = std::move(type),
+            .shouldCreateNew = shouldCreateNew,
         });
     }
 

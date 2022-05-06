@@ -2,6 +2,7 @@
 
 #include "functionargument.h"
 #include "value.h"
+#include "variabledescription.h"
 #include <map>
 #include <random>
 #include <vector>
@@ -31,7 +32,7 @@ struct Context {
     ValueOrRef with = ValueOrRef{Type::Integer};
 
     Context(GlobalContext &globalContext,
-            const std::vector<std::pair<std::string, Type>> vars = {},
+            const std::vector<ArgumentDescription> vars = {},
             FunctionArgumentValues = {},
             Module *module = nullptr,
             Value me = {});

@@ -5,7 +5,7 @@
 #include "module.h"
 
 Context::Context(GlobalContext &globalContext,
-                 const std::vector<std::pair<std::string, Type>> vars,
+                 const std::vector<ArgumentDescription> vars,
                  FunctionArgumentValues args,
                  Module *module,
                  Value me)
@@ -14,7 +14,13 @@ Context::Context(GlobalContext &globalContext,
     , me{me} {
     localVariables.reserve(vars.size());
     for (auto &var : vars) {
-        localVariables.push_back(Value::create(var.second));
+        if (var.shouldCreateNew) {
+            localVariables.push_back(
+                Value{ClassInstance::create(var.type.classType)});
+        }
+        else {
+            localVariables.push_back(Value::create(var.type));
+        }
     }
 
     this->args = std::move(args);

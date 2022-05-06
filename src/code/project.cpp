@@ -63,6 +63,10 @@ void Project::parseProjectFile(std::filesystem::path projectPath) {
     for (auto &path : moduleList) {
         addModule(path.stem(), projectPath.parent_path() / trim(path));
     }
+
+    for (auto &mod : _globalContext.modules) {
+        mod->init();
+    }
 }
 
 void Project::addModule(std::string name, std::filesystem::__cxx11::path path) {

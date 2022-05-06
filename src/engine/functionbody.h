@@ -2,6 +2,7 @@
 #include "Location.h"
 #include "context.h"
 #include "function.h"
+#include "variabledescription.h"
 #include <vector>
 
 enum class ReturnT {
@@ -41,7 +42,7 @@ public:
     using CommandT = ::CommandT;
 
 private:
-    std::vector<std::pair<std::string, Type>> _localVariables;
+    std::vector<ArgumentDescription> _localVariables;
     std::vector<CommandT> _commands;
     std::vector<size_t> _line;
 
@@ -53,7 +54,7 @@ public:
 
     int variableIndex(std::string_view name) const;
 
-    void pushLocalVariable(std::string, Type t);
+    void pushLocalVariable(std::string, Type t, bool shouldCreateNew);
     void forgetLocalVariableName(std::string_view);
 
     void pushCommand(const CommandT &t, size_t line);

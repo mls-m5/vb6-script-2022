@@ -8,7 +8,7 @@ TEST_SUIT_BEGIN
 TEST_CASE("create struct") {
     auto classType = ClassType{};
 
-    classType.addAddVariable("x", {Type::Integer});
+    classType.addAddVariable("x", {Type::Integer}, false);
 
     auto s = StructT{&classType};
     auto value = Value{s};
@@ -23,7 +23,7 @@ TEST_CASE("create struct") {
 TEST_CASE("send as argument") {
     auto classType = ClassType{};
 
-    classType.addAddVariable("x", {Type::Integer});
+    classType.addAddVariable("x", {Type::Integer}, false);
 
     auto s = StructT{&classType};
     auto value = Value{s};

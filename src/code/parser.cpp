@@ -214,13 +214,13 @@ int assertTypeDeclaration(TokenPair &token) {
             token.content()};
 }
 
-Type parseAsStatement(TokenPair &token) {
+TypeDescription parseAsStatement(TokenPair &token) {
     auto loc = token.first->loc;
 
     auto typeSyntax = assertTypeDeclaration(token);
 
     if (typeSyntax == 2) {
-        return {parseShorthandType(token)};
+        return TypeDescription{Type{parseShorthandType(token)}};
     }
 
     token.next();
@@ -229,28 +229,35 @@ Type parseAsStatement(TokenPair &token) {
         throw VBParsingError{loc, "expected typename"};
     }
 
+    bool shouldCreateNew = false;
+
+    if (token.type() == Token::New) {
+        shouldCreateNew = true;
+        token.next();
+    }
+
     auto type = parseType(token.type());
 
     if (type) {
         token.next();
-        return *type;
+        return {*type};
     }
 
     // Todo: Make sure to check types in other modules aswell
     if (auto structType = token.structType(token.content())) {
         token.next();
-        return Type{Type::Struct, structType};
+        return {Type{Type::Struct, structType}};
     }
 
     if (auto classType = token.classType(token.content())) {
         token.next();
-        return Type{Type::Class, classType};
+        return {Type{Type::Class, classType}, shouldCreateNew};
     }
 
     if (auto c = token.currentModule->classType.get()) {
         if (iequals(c->name, token.content())) {
             token.next();
-            return Type{Type::Class, c};
+            return {Type{Type::Class, c}, shouldCreateNew};
         }
     }
 
@@ -307,7 +314,13 @@ FunctionArguments parseArguments(TokenPair &token) {
             optionalValue = parseExpression(token);
         }
 
-        args.push_back({type, name, !byVal, optionalValue});
+        args.push_back(FunctionArgument{
+            .type = type.type,
+            .name = name,
+            .isByRef = !byVal,
+            .shouldCreateNew = type.shouldCreateNew,
+            .defaultValue = optionalValue,
+        });
 
         if (token.content() == ",") {
             shouldContinue = true;
@@ -414,9 +427,9 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
                 index != -1) {
                 return {&context.args.at(index).get()};
             }
-            else if (auto index = context.module->staticVariable(name);
+            else if (auto index = context.module->staticVariableIndex(name);
                      index != -1) {
-                return {&context.module->staticVariables.at(index).second};
+                return {&context.module->staticVariable(index)};
             }
             else if (auto f = context.function(name)) {
                 // TODO: Cache function pointer
@@ -942,7 +955,8 @@ void parseLocalVariableDeclaration(TokenPair &token) {
         token.next();
         auto type = parseAsStatement(token);
         try {
-            token.currentFunctionBody->pushLocalVariable(name, type);
+            token.currentFunctionBody->pushLocalVariable(
+                name, type.type, type.shouldCreateNew);
         }
         catch (std::logic_error &e) {
             throw VBParsingError{token.lastLoc,
@@ -970,11 +984,11 @@ void parseMemberDeclaration(TokenPair &token) {
     if (token.currentModule->type() == ModuleType::Class) {
         auto classType = token.currentModule->classType.get();
 
-        classType->addAddVariable(name, type);
+        classType->addAddVariable(name, type.type, type.shouldCreateNew);
     }
     else {
-        token.currentModule->staticVariables.push_back(
-            {name, Value::create(type)});
+        token.currentModule->addStaticVariable(
+            name, type.type, type.shouldCreateNew);
     }
 }
 
@@ -1104,7 +1118,7 @@ void parseStruct(Line *line,
 
         auto type = parseAsStatement(token);
 
-        structType.addAddVariable(memberName, type);
+        structType.addAddVariable(memberName, type.type, type.shouldCreateNew);
     }
 
     nextLine();
@@ -1257,7 +1271,7 @@ FunctionBody::CommandT parseForStatement(Line **line,
         token.next();
         auto name = token.content();
         token.next();
-        auto type = std::optional<Type>{};
+        auto type = std::optional<TypeDescription>{};
 
         if (token.type() == Token::As) {
             type = parseAsStatement(token);
@@ -1291,7 +1305,8 @@ FunctionBody::CommandT parseForStatement(Line **line,
         isScopeLocalVariable = true;
         auto type = parseAsStatement(token);
 
-        token.currentFunctionBody->pushLocalVariable(name, type);
+        token.currentFunctionBody->pushLocalVariable(
+            name, type.type, type.shouldCreateNew);
     }
 
     auto variableIdentification =
@@ -1579,10 +1594,14 @@ Module &prescanModule(std::filesystem::path path, GlobalContext &global) {
         module->classType->name = path.stem();
 
         if (path.extension() == ".frm") {
-            module->staticVariables.push_back({
+            module->addStaticVariable(
                 module->classType->name,
-                Value{ClassInstance::create(module->classType.get())},
-            });
+                Type{Type::Class, module->classType.get()},
+                true);
+            //            module->staticVariables.push_back({
+            //                module->classType->name,
+            //                Value{ClassInstance::create(module->classType.get())},
+            //            });
         }
     }
 

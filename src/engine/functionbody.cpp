@@ -2,31 +2,33 @@
 #include "classinstance.h"
 
 Type FunctionBody::variable(int i) const {
-    return _localVariables.at(i).second;
+    return _localVariables.at(i).type;
 }
 
 int FunctionBody::variableIndex(std::string_view name) const {
     for (size_t i = 0; i < _localVariables.size(); ++i) {
-        if (_localVariables.at(i).first == name) {
+        if (_localVariables.at(i).name == name) {
             return i;
         }
     }
     return -1;
 }
 
-void FunctionBody::pushLocalVariable(std::string name, Type t) {
+void FunctionBody::pushLocalVariable(std::string name,
+                                     Type t,
+                                     bool shouldCreateNew) {
     for (auto &var : _localVariables) {
-        if (var.first == name) {
+        if (var.name == name) {
             throw std::logic_error{"variable already exists"};
         }
     }
-    _localVariables.push_back({std::move(name), t});
+    _localVariables.push_back({std::move(name), t, shouldCreateNew});
 }
 
 void FunctionBody::forgetLocalVariableName(std::string_view name) {
     for (auto &var : _localVariables) {
-        if (var.first == name) {
-            var.first = ""; // Simple way to forgetting name
+        if (var.name == name) {
+            var.name = ""; // Simple way to forgetting name
             return;
         }
     }

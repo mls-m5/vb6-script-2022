@@ -12,6 +12,7 @@ struct FunctionArgument {
     Type type;
     std::string name;
     bool isByRef = true;
+    bool shouldCreateNew = false;
     // If 'default value' is set, the argument is Optional
     std::function<ValueOrRef(Context &localcontext)> defaultValue = {};
 };
