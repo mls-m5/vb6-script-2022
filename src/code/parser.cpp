@@ -531,26 +531,69 @@ std::pair<std::function<T(T, T)>, int> getOperator(std::string name) {
 #undef DEFINE_BINARY_OPERATOR
 }
 
+ExpressionT parseUnary(TokenPair &token, int previousPrecedence = 1000) {
+    auto op = token.content();
+
+    token.next();
+
+    auto expression = parseExpression(token);
+
+    // TODO: Handle precedence
+    if (op == "-") {
+        return [expression](Context &context) -> ValueOrRef {
+            return expression(context)->negative();
+        };
+    }
+    else if (op == "+") {
+        return [expression](Context &context) -> ValueOrRef {
+            auto value = expression(context).get();
+            if (value.typeName() == Type::String) {
+                return Value{value.toFloat()};
+            }
+            else if (value.isNumber()) {
+                return value;
+            }
+            else {
+                throw VBRuntimeError{
+                    context.currentLocation(),
+                    "Value is not a number, in unary operation"};
+            }
+        };
+    }
+    else if (op == "Not") {
+        return [expression](Context &context) -> ValueOrRef {
+            return {!expression(context)->toBool()};
+        };
+    }
+
+    throw VBParsingError{
+        token.lastLoc,
+        "Invalid unary operator, or to many operators in a row " + op};
+}
+
 ExpressionT parseBinary(ExpressionT first,
                         TokenPair &token,
                         int previousPrecedence = 1000) {
-    auto op = token.content();
+    auto opFInt = getOperator<LongT>(token.content());
+    auto opFFloat = getOperator<DoubleT>(token.content());
+
+    auto currentPrecedence = opFInt.second;
 
     token.next();
 
     auto second = parseExpression(token, true);
 
     for (; token.type() == Token::Operator;) {
-        auto nextOp = getOperator<LongT>(op);
-        auto precedence = nextOp.second;
+        auto nextOp = getOperator<LongT>(token.content());
+        auto nextPrecedence = nextOp.second;
 
-        if (precedence < previousPrecedence) {
-            second = parseBinary(first, token, precedence);
+        if (nextPrecedence < currentPrecedence) {
+            second = parseBinary(second, token, currentPrecedence);
+        }
+        else {
+            break;
         }
     }
-
-    auto opFInt = getOperator<LongT>(op);
-    auto opFFloat = getOperator<DoubleT>(op);
 
     auto expr =
         [first, second, opFInt, opFFloat](Context &context) -> ValueOrRef {
@@ -577,8 +620,11 @@ ExpressionT parseBinary(ExpressionT first,
                              "could not convert to numeric value"};
     };
 
-    if (token.type() == Token::Operator) {
-        return parseBinary(expr, token, previousPrecedence);
+    if (token.type() ==
+        Token::Operator // &&
+                        //        currentPrecedence >= previousPrecedence
+    ) {
+        return parseBinary(expr, token, currentPrecedence);
     }
 
     return expr;
@@ -622,6 +668,9 @@ ExpressionT parseExpression(TokenPair &token, bool ignoreBinary) {
 
     case Token::ParenthesesBegin:
         expr = parseParentheses(token);
+        break;
+    case Token::Operator:
+        expr = parseUnary(token);
         break;
     case Token::Me:
     case Token::Period:

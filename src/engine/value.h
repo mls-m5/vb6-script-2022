@@ -67,6 +67,8 @@ struct Value {
 
     DoubleT toFloat() const;
 
+    bool isNumber() const;
+
     bool toBool() const {
         return toInteger();
     }
@@ -85,6 +87,9 @@ struct Value {
             return toFloat();
         }
     }
+
+    // Flip sign value
+    Value negative() const;
 
     // Implement operator =()
 };

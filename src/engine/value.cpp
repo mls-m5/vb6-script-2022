@@ -112,6 +112,21 @@ DoubleT Value::toFloat() const {
     return {};
 }
 
+bool Value::isNumber() const {
+    switch (typeName()) {
+    case Type::String:
+        return false;
+    case Type::Class:
+        return false;
+    case Type::Struct:
+        return false;
+    default:
+        return true;
+    }
+
+    return false;
+}
+
 ClassT Value::toClass() const {
     if (value.index() == Type::Class) {
         return get<ClassT>();
@@ -131,4 +146,27 @@ Type Value::commonType(Type other) const {
         return {Type::Long};
     }
     return {Type::Integer};
+}
+
+Value Value::negative() const {
+    switch (typeName()) {
+    case Type::String:
+        return {-toFloat()};
+    case Type::Single:
+        return -get<SingleT>();
+    case Type::Double:
+        return -get<DoubleT>();
+    case Type::Long:
+        return -get<LongT>();
+    case Type::Integer:
+        return -get<IntegerT>();
+    case Type::Byte:
+        return -get<ByteT>();
+    case Type::Class:
+        throw VBRuntimeError{"could not negate class type"};
+    case Type::Struct:
+        throw VBRuntimeError{"could not negate struct type"};
+    }
+
+    return {};
 }
