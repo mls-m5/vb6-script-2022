@@ -12,9 +12,16 @@ void loadDX7(GlobalContext &global) {
 
     auto &dxGlobal = createSimModule("builtin/DXGlobal.bas", global);
 
-    auto &RECT = dxGlobal.addStruct("RECT");
-    RECT.addAddVariable("Left", {Type::Integer}, false);
-    RECT.addAddVariable("Top", {Type::Integer}, false);
-    RECT.addAddVariable("Right", {Type::Integer}, false);
-    RECT.addAddVariable("Bottom", {Type::Integer}, false);
+    {
+        auto &RECT = dxGlobal.addStruct("RECT");
+        RECT.addAddVariable("Left", {Type::Integer}, false);
+        RECT.addAddVariable("Top", {Type::Integer}, false);
+        RECT.addAddVariable("Right", {Type::Integer}, false);
+        RECT.addAddVariable("Bottom", {Type::Integer}, false);
+    }
+
+    auto &DDSURFACEDESC2 = dxGlobal.addStruct("DDSURFACEDESC2");
+    // TODO: Add necessary members
+
+    auto &DDCOLORKEY = dxGlobal.addStruct("DDCOLORKEY");
 }
