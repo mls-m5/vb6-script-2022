@@ -401,7 +401,7 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
     auto name = token.content();
 
     if (token.type() != Token::Word && token.type() != Token::Me &&
-        token.type() != Token::Period) {
+        token.type() != Token::Period && token.type() != Token::MsgBox) {
         throw VBParsingError{token.lastLoc,
                              "Expected word got " + token.content()};
     }
@@ -1068,6 +1068,7 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         };
     case Token::Period:
     case Token::Me:
+    case Token::MsgBox:
     case Token::Word: {
         {
             auto identifier = parseIdentifier(token);
