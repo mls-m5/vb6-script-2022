@@ -21,6 +21,8 @@ add_library(
     src/code/project.cpp
     src/code/codeblock.cpp
     src/libs/dx.cpp
+    src/libs/simmodule.cpp
+    src/libs/vbstdlib.cpp
     )
 
 target_compile_features(

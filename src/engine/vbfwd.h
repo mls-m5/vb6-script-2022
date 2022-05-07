@@ -5,3 +5,4 @@ class Function;
 class ClassType;
 class ClassInstance;
 class Value;
+class Module;
