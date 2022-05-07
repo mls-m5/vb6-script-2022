@@ -19,6 +19,7 @@ add_library(
     src/code/token.cpp
     src/code/parsetypes.cpp
     src/code/project.cpp
+    src/libs/dx.cpp
     )
 
 target_compile_features(

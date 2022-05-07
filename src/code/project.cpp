@@ -1,5 +1,6 @@
 #include "project.h"
 #include "classinstance.h"
+#include "libs/dx.h"
 #include "parser.h"
 #include "vbparsingerror.h"
 #include <fstream>
@@ -32,6 +33,7 @@ std::pair<std::string, std::string> splitLine(std::string line, char c) {
 
 Project::Project(std::string name)
     : _context{_globalContext} {
+    loadDX7(_globalContext);
     parseProjectFile(name);
 }
 
