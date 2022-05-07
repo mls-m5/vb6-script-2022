@@ -1409,7 +1409,11 @@ FunctionBody::CommandT parseBlock(
         auto t = token.type();
 
         if (t == Token::End) {
-            if (token.second && token.second->type() == Token::With) {
+            if (!token.second) {
+                block.addCommand([](auto &) -> ReturnT { std::exit(0); });
+                *line = nextLine();
+            }
+            else if (token.second->type() == Token::With) {
                 if (token.isWithStatement) {
                     token.isWithStatement = false;
                     *line = nextLine();
