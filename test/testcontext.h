@@ -10,5 +10,7 @@ struct TestContext {
     FunctionArgumentValues args;
 
     TestContext()
-        : local{global, {}, {}, nullptr} {}
+        : local{global, {}, {}, nullptr} {
+        global.disableEnd(true);
+    }
 };

@@ -16,7 +16,9 @@ Value Function::call(const FunctionArgumentValues &args,
         throw VBRuntimeError{context.currentLocation(),
                              "Missmatching number of arguments"};
     }
-    return _f(args, me, context);
+    auto ret = _f(args, me, context);
+    context.globalContext.err({1});
+    return ret;
 }
 
 std::string_view Function::name() const {

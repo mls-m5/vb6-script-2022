@@ -748,6 +748,12 @@ ExpressionT parseExpression(TokenPair &token, bool ignoreBinary) {
         };
         token.next();
         break;
+    case Token::Err:
+        expr = [](Context &context) -> ValueOrRef {
+            return context.globalContext.err();
+        };
+        token.next();
+        break;
     case Token::Me:
     case Token::Period:
     case Token::Word: {
@@ -1056,6 +1062,12 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
         return parseExitStatement(token);
     case Token::Continue:
         return parseContinue(token);
+    case Token::End:
+        token.next();
+        return [](Context &context) {
+            context.globalContext.end();
+            return ReturnT::Return;
+        };
     case Token::Set: {
         token.next();
         return parseAssignment(token, parseIdentifier(token), true);
@@ -1430,7 +1442,11 @@ FunctionBody::CommandT parseBlock(
 
         if (t == Token::End) {
             if (!token.second) {
-                block.addCommand([](auto &) -> ReturnT { std::exit(0); });
+                // End statement
+                block.addCommand([](auto &context) -> ReturnT {
+                    context.globalContext.end();
+                    return ReturnT::Standard;
+                });
                 *line = nextLine();
             }
             else if (token.second->type() == Token::With) {

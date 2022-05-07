@@ -52,6 +52,3 @@ const Function *Context::function(std::string_view name) const {
 
     return module->function(name);
 }
-
-GlobalContext::GlobalContext()
-    : nothingType{std::make_unique<ClassType>()} {}
