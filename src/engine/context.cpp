@@ -1,7 +1,7 @@
 #include "context.h"
-#include "Location.h"
 #include "classinstance.h"
 #include "classtype.h"
+#include "location.h"
 #include "module.h"
 
 Context::Context(GlobalContext &globalContext,
@@ -30,7 +30,7 @@ Location Context::currentLocation() const {
     if (module) {
         return Location{
             line,
-            std::make_shared<std::filesystem::path>(module->path),
+            std::make_shared<std::filesystem::path>(module->path()),
         };
     }
 

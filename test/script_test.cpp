@@ -1,6 +1,6 @@
 
-#include "Location.h"
 #include "functionbody.h"
+#include "location.h"
 #include "mls-unit-test/unittest.h"
 #include "parser.h"
 #include "testcontext.h"
@@ -42,7 +42,7 @@ auto innerAssert = Function::FuncT{
         std::cout << value.toString() << std::endl;
         auto arg = value.toInteger();
         if (!arg) {
-            throw std::runtime_error{context.module->path.string() + ":" +
+            throw std::runtime_error{context.module->path().string() + ":" +
                                      std::to_string(context.line) +
                                      ": assertion failed "};
         }

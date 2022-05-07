@@ -20,15 +20,18 @@ struct Module {
 private:
     std::vector<StaticVariable> staticVariables;
 
+    std::vector<std::shared_ptr<Function>> _functions;
+    std::vector<std::shared_ptr<ClassType>> _classes;
+    std::filesystem::path _path;
+
 public:
     Module() = default;
     Module(const Module &) = delete;
     Module &operator=(const Module &) = delete;
     ~Module() = default;
 
-    std::vector<std::shared_ptr<Function>> functions;
-    std::vector<std::shared_ptr<ClassType>> classes;
-    std::filesystem::path path;
+    Module(std::filesystem::path path)
+        : _path{path} {}
 
     std::unique_ptr<ClassType> classType;
 
@@ -51,16 +54,20 @@ public:
     }
 
     Function &addFunction(std::shared_ptr<Function> function) {
-        functions.push_back(std::move(function));
-        return *functions.back();
+        _functions.push_back(std::move(function));
+        return *_functions.back();
     }
 
-    std::string name() {
-        return path.stem();
+    std::string name() const {
+        return _path.stem();
+    }
+
+    std::filesystem::path path() const {
+        return _path;
     }
 
     Function *function(std::string_view name) const {
-        for (auto &f : functions) {
+        for (auto &f : _functions) {
             if (f->name() == name) {
                 return f.get();
             }
@@ -70,7 +77,7 @@ public:
     }
 
     ClassType *structType(std::string_view name) {
-        for (auto &c : classes) {
+        for (auto &c : _classes) {
             // TODO: Make case insensitive comparison struct
             if (c->name == name) {
                 return c.get();
@@ -107,8 +114,8 @@ public:
     }
 
     ClassType &addStruct(std::string name) {
-        classes.push_back(std::make_shared<ClassType>());
-        auto &s = *classes.back();
+        _classes.push_back(std::make_shared<ClassType>());
+        auto &s = *_classes.back();
         s.name = name;
         s.isStruct = true;
         return s;

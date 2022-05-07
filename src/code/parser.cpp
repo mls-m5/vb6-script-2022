@@ -1512,7 +1512,7 @@ Module &parseGlobal(Line *line,
         token.f = nextToken;
         token.currentModule = &module;
         token.next();
-        token.modules = &global.modules; // Copy on every line... :)
+        token.modules = &global.modules;
 
         if (!token) {
             line = nextLine();
@@ -1585,9 +1585,8 @@ Module &parseGlobal(Line *line,
 } // namespace
 
 Module &prescanModule(std::filesystem::path path, GlobalContext &global) {
-    auto module = std::make_unique<Module>();
+    auto module = std::make_unique<Module>(path);
 
-    module->path = path;
     if (path.extension() == ".cls" || path.extension() == ".frm") {
         module->classType = std::make_unique<ClassType>();
         module->classType->module = module.get();
@@ -1598,10 +1597,6 @@ Module &prescanModule(std::filesystem::path path, GlobalContext &global) {
                 module->classType->name,
                 Type{Type::Class, module->classType.get()},
                 true);
-            //            module->staticVariables.push_back({
-            //                module->classType->name,
-            //                Value{ClassInstance::create(module->classType.get())},
-            //            });
         }
     }
 
