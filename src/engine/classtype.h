@@ -26,6 +26,7 @@ public:
 
     ~ClassType();
 
+    //! @param shouldCreateNew is only relevant for class variables
     void addAddVariable(std::string name, Type type, bool shouldCreateNew);
 
     int getVariableIndex(std::string_view name);
