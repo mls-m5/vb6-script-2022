@@ -1143,6 +1143,9 @@ FunctionBody::CommandT parseSelectCase(Line **line,
     auto cases = std::vector<std::pair<ExpressionT, CommandT>>{};
 
     token.next();
+
+    auto caseElse = CommandT{};
+
     for (;;) {
         if (token.type() != Token::Case) {
             throw VBParsingError{
@@ -1151,17 +1154,29 @@ FunctionBody::CommandT parseSelectCase(Line **line,
 
         token.next();
 
-        //! Just hope that it happends to be constant
-        cases.push_back({parseExpression(token),
-                         parseBlock(
-                             line,
-                             token,
-                             nextLine,
-                             [](auto token) {
-                                 return token == Token::Case ||
-                                        token == Token::End;
-                             },
-                             false)});
+        if (token.type() == Token::Else) {
+            caseElse = parseBlock(
+                line,
+                token,
+                nextLine,
+                [](auto token) {
+                    return token == Token::Case || token == Token::End;
+                },
+                false);
+        }
+        else {
+            //! Just hope that it happends to be constant
+            cases.push_back({parseExpression(token),
+                             parseBlock(
+                                 line,
+                                 token,
+                                 nextLine,
+                                 [](auto token) {
+                                     return token == Token::Case ||
+                                            token == Token::End;
+                                 },
+                                 false)});
+        }
 
         if (token.type() == Token::End) {
             break;
@@ -1170,7 +1185,7 @@ FunctionBody::CommandT parseSelectCase(Line **line,
 
     *line = nextLine();
 
-    return [expression, cases](Context &context) {
+    return [expression, cases, caseElse](Context &context) {
         auto value = expression(context).get();
 
         for (auto &c : cases) {
@@ -1179,6 +1194,10 @@ FunctionBody::CommandT parseSelectCase(Line **line,
                     return ret;
                 }
             }
+        }
+
+        if (caseElse) {
+            return caseElse(context);
         }
 
         return ReturnT::Standard;
