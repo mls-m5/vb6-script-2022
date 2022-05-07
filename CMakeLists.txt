@@ -11,6 +11,7 @@ add_library(
     src/engine/context.cpp
     src/engine/functionbody.cpp
     src/engine/type.cpp
+    src/engine/globalcontext.cpp
     src/code/lexer.cpp
     src/code/parser.cpp
     src/code/token.cpp

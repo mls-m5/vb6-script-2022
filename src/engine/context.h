@@ -1,23 +1,12 @@
 #pragma once
 
 #include "functionargument.h"
+#include "globalcontext.h"
 #include "value.h"
 #include "variabledescription.h"
 #include <map>
 #include <random>
 #include <vector>
-
-struct ModuleList : std::vector<std::shared_ptr<class Module>> {};
-
-struct GlobalContext {
-    ModuleList modules;
-
-    std::unique_ptr<ClassType> nothingType;
-
-    std::mt19937_64 generator;
-
-    GlobalContext();
-};
 
 struct Module;
 

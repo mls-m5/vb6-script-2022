@@ -1,6 +1,7 @@
 #include "context.h"
 #include "classinstance.h"
 #include "classtype.h"
+#include "globalcontext.h"
 #include "location.h"
 #include "module.h"
 
