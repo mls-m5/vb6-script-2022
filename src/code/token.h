@@ -30,15 +30,11 @@ struct Token {
     // Check if token is keyword
     Keyword type() const;
 
-    operator Location() const {
-        return loc;
-    }
+    operator Location() const;
 
     // Do not case sensitive
     bool operator==(std::string_view str);
-    bool operator==(const char *c) {
-        return *this == std::string_view{c};
-    }
+    bool operator==(const char *c);
 };
 
 struct Line : std::vector<Token> {};

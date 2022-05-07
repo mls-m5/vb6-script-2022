@@ -83,6 +83,14 @@ Token::Keyword Token::type() const {
     return getKeyword(content);
 }
 
+Token::operator Location() const {
+    return loc;
+}
+
+bool Token::operator==(const char *c) {
+    return *this == std::string_view{c};
+}
+
 bool isOperator(Token::Keyword keyword) {
     switch (keyword) {
     case Token::Operator:
