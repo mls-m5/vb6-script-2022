@@ -1,5 +1,8 @@
 #pragma once
 
+#include "classinstance.h"
+#include "context.h"
+#include "globalcontext.h"
 #include "module.h"
 #include <filesystem>
 

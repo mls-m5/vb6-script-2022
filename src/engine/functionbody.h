@@ -63,11 +63,7 @@ public:
                Value me,
                Context &context) const;
 
-    void function(Function *function) {
-        _function = function;
-    }
+    void function(Function *function);
 
-    const Function *function() const {
-        return _function;
-    }
+    const Function *function() const;
 };

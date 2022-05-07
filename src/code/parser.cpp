@@ -1,4 +1,6 @@
 #include "parser.h"
+#include "classinstance.h"
+#include "classtype.h"
 #include "codeblock.h"
 #include "engine/function.h"
 #include "functionbody.h"
@@ -11,6 +13,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <map>
 
 namespace {
 

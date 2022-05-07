@@ -1,8 +1,34 @@
 #include "value.h"
 #include "classinstance.h"
+#include "vbruntimeerror.h"
 
 bool Value::operator==(const Value &other) const {
     return toInteger() == other.toInteger();
+}
+
+Value::Value(IntegerT i)
+    : value{i} {}
+
+Value::Value(std::string str)
+    : value{std::move(str)} {}
+
+Value::Value(SingleT d)
+    : value{d} {}
+
+Value::Value(DoubleT d)
+    : value{d} {}
+
+Value::Value(LongT l)
+    : value{l} {}
+
+Value::Value(ClassT i)
+    : value{std::move(i)} {}
+
+Value::Value(StructT i)
+    : value{std::move(i)} {}
+
+void Value::forceSet(Value &other) {
+    value = std::move(other.value);
 }
 
 Value Value::create(Type type) {
@@ -28,6 +54,10 @@ Value Value::create(Type type) {
     }
 
     throw VBRuntimeError{"invalid type"};
+}
+
+Type::TypeName Value::typeName() const {
+    return static_cast<Type::TypeName>(value.index());
 }
 
 Type Value::type() const {
@@ -129,6 +159,10 @@ bool Value::isNumber() const {
     }
 
     return false;
+}
+
+bool Value::toBool() const {
+    return toInteger();
 }
 
 ClassT Value::toClass() const {

@@ -17,50 +17,36 @@ struct Value {
 
     bool operator==(const Value &other) const;
 
-    Value(IntegerT i)
-        : value{i} {}
+    Value(IntegerT i);
 
-    Value(std::string str)
-        : value{std::move(str)} {}
+    Value(std::string str);
 
-    Value(SingleT d)
-        : value{d} {}
+    Value(SingleT d);
 
-    Value(DoubleT d)
-        : value{d} {}
+    Value(DoubleT d);
 
-    Value(LongT l)
-        : value{l} {}
+    Value(LongT l);
 
-    //    Value(BoolT l)
-    //        : value{l} {}
+    Value(ClassT i);
 
-    Value(ClassT i)
-        : value{std::move(i)} {}
-
-    Value(StructT i)
-        : value{std::move(i)} {}
+    Value(StructT i);
 
     //! Set operation that also changes the type of the value
-    void forceSet(Value &other) {
-        value = std::move(other.value);
-    }
+    void forceSet(Value &other);
 
     static Value create(Type type);
 
     template <typename T>
-    auto &get() {
+    T &get() {
         return std::get<T>(value);
     }
 
     template <typename T>
-    auto &get() const {
+    const T &get() const {
         return std::get<T>(value);
     }
 
-    Type::TypeName typeName() const {
-        return static_cast<Type::TypeName>(value.index());
-    }
+    Type::TypeName typeName() const;
 
     Type type() const;
 
@@ -72,9 +58,7 @@ struct Value {
 
     bool isNumber() const;
 
-    bool toBool() const {
-        return toInteger();
-    }
+    bool toBool() const;
 
     ClassT toClass() const;
 

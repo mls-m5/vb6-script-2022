@@ -1,4 +1,5 @@
 #include "project.h"
+#include "classinstance.h"
 #include "parser.h"
 #include "vbparsingerror.h"
 #include <fstream>

@@ -1,4 +1,4 @@
-
+#include "classtype.h"
 #include "functionbody.h"
 #include "location.h"
 #include "mls-unit-test/unittest.h"

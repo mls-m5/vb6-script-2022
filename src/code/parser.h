@@ -1,6 +1,8 @@
 #pragma once
 
+#include "classinstance.h"
 #include "module.h"
+#include "vbfwd.h"
 #include <filesystem>
 #include <iosfwd>
 

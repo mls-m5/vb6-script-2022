@@ -1,3 +1,5 @@
+#include "classtype.h"
+#include "function.h"
 #include "mls-unit-test/unittest.h"
 #include "parser.h"
 #include "testcontext.h"

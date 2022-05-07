@@ -1,3 +1,4 @@
+#include "classinstance.h"
 #include "function.h"
 #include "functionbody.h"
 #include "mls-unit-test/unittest.h"
@@ -25,10 +26,13 @@ TEST_CASE("basic function call") {
                      {
                          FunctionArgument{Type{Type::Integer}, "x"},
                          FunctionArgument{Type{Type::Integer}, "y"},
-                         FunctionArgument{Type{Type::Integer},
-                                          "y",
-                                          false,
-                                          [](Context &) { return Value{1}; }},
+                         FunctionArgument{
+                             .type = Type{Type::Integer},
+                             .name = "y",
+                             .isByRef = false,
+                             .shouldCreateNew = false,
+                             .defaultValue = [](Context &) { return Value{1}; },
+                         },
                      },
                  },
                  true};

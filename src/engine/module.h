@@ -1,8 +1,9 @@
 #pragma once
 
-#include "classtype.h"
-#include "function.h"
+#include "value.h"
+#include "vbfwd.h"
 #include <filesystem>
+#include <vector>
 
 enum class ModuleType {
     Module,
@@ -30,94 +31,32 @@ public:
     Module &operator=(const Module &) = delete;
     ~Module() = default;
 
-    Module(std::filesystem::path path)
-        : _path{path} {}
+    Module(std::filesystem::path path);
 
     std::unique_ptr<ClassType> classType;
 
     //! Init static variables
-    void init() {
-        for (auto &var : staticVariables) {
-            if (var.shouldCreateNew) {
-                if (var.type.type != Type::Class || !var.type.classType) {
-                    throw VBRuntimeError{"variable " + var.name +
-                                         " is not of class type"};
-                }
-                auto type = var.type.classType;
-                var.value = Value{ClassInstance::create(type)};
-            }
-        }
-    }
+    void init();
 
-    ModuleType type() {
-        return classType ? ModuleType::Class : ModuleType::Module;
-    }
+    ModuleType type();
 
-    Function &addFunction(std::shared_ptr<Function> function) {
-        _functions.push_back(std::move(function));
-        return *_functions.back();
-    }
+    Function &addFunction(std::shared_ptr<Function> function);
 
-    std::string name() const {
-        return _path.stem();
-    }
+    std::string name() const;
 
-    std::filesystem::path path() const {
-        return _path;
-    }
+    std::filesystem::path path() const;
 
-    Function *function(std::string_view name) const {
-        for (auto &f : _functions) {
-            if (f->name() == name) {
-                return f.get();
-            }
-        }
+    Function *function(std::string_view name) const;
 
-        return nullptr;
-    }
+    ClassType *structType(std::string_view name);
 
-    ClassType *structType(std::string_view name) {
-        for (auto &c : _classes) {
-            // TODO: Make case insensitive comparison struct
-            if (c->name == name) {
-                return c.get();
-            }
-        }
+    int staticVariableIndex(std::string_view name);
 
-        return nullptr;
-    }
-
-    int staticVariableIndex(std::string_view name) {
-        for (size_t i = 0; i < staticVariables.size(); ++i) {
-            // TODO: Make case insensitive comparison struct variables
-            if (staticVariables.at(i).name == name) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    Value &staticVariable(int index) {
-        return staticVariables.at(index).value;
-    }
+    Value &staticVariable(int index);
 
     void addStaticVariable(std::string name,
                            Type type,
-                           bool shouldCreateNew = false) {
-        staticVariables.push_back({
-            name,
-            Value::create(type),
-            type,
-            shouldCreateNew,
-        });
-    }
+                           bool shouldCreateNew = false);
 
-    ClassType &addStruct(std::string name) {
-        _classes.push_back(std::make_shared<ClassType>());
-        auto &s = *_classes.back();
-        s.name = name;
-        s.isStruct = true;
-        return s;
-    }
+    ClassType &addStruct(std::string name);
 };

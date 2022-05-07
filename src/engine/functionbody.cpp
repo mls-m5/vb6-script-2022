@@ -59,3 +59,11 @@ Value FunctionBody::call(const FunctionArgumentValues &args,
 
     return local.returnValue;
 }
+
+void FunctionBody::function(Function *function) {
+    _function = function;
+}
+
+const Function *FunctionBody::function() const {
+    return _function;
+}

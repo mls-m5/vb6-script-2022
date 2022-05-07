@@ -1,12 +1,11 @@
 #pragma once
 
-#include "classinstance.h"
-#include "context.h"
+#include "functionargument.h"
 #include "type.h"
-#include "value.h"
 #include <functional>
 #include <string>
-#include <vector>
+
+class Context;
 
 struct FunctionArgument {
     Type type;
@@ -31,33 +30,17 @@ private:
     bool _isStatic = true;
 
 public:
-    Function(std::string name, FunctionArguments args, bool isStatic)
-        : _name{std::move(name)}
-        , _arguments{std::move(args)}
-        , _isStatic{isStatic} {}
+    Function(std::string name, FunctionArguments args, bool isStatic);
 
     Value call(const FunctionArgumentValues &args,
                Value me,
                Context &context) const;
 
-    std::string_view name() const {
-        return _name;
-    }
+    std::string_view name() const;
 
-    const FunctionArguments &arguments() const {
-        return _arguments;
-    }
+    const FunctionArguments &arguments() const;
 
-    int argumentIndex(std::string_view name) const {
-        for (size_t i = 0; i < _arguments.size(); ++i) {
-            if (_arguments.at(i).name == name) {
-                return i;
-            }
-        }
-        return -1;
-    }
+    int argumentIndex(std::string_view name) const;
 
-    void body(FuncT f) {
-        _f = f;
-    }
+    void body(FuncT f);
 };
