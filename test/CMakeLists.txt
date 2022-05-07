@@ -3,7 +3,7 @@ project(vb6-script-2022)
 
 enable_testing()
 
-function(test testname)
+function(test_disabled testname)
     add_executable(${testname}_test ${testname}_test.cpp)
 
     target_include_directories(${testname}_test PRIVATE tests)
@@ -25,6 +25,11 @@ function(test testname)
         PUBLIC
         )
 
+endfunction()
+
+function(test testname)
+    test_disabled(${testname})
+
     add_test(NAME ${testname}_test
         COMMAND ${testname}_test
         )
@@ -39,4 +44,4 @@ test(lexer)
 test(parser)
 test(script)
 test(struct)
-test(project)
+test_disabled(project)
