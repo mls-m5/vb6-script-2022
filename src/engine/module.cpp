@@ -3,7 +3,7 @@
 #include "classtype.h"
 #include "function.h"
 
-Module::Module(std::filesystem::__cxx11::path path)
+Module::Module(std::filesystem::path path)
     : _path{path} {}
 
 void Module::init() {
@@ -32,7 +32,7 @@ std::string Module::name() const {
     return _path.stem();
 }
 
-std::filesystem::__cxx11::path Module::path() const {
+std::filesystem::path Module::path() const {
     return _path;
 }
 

@@ -72,7 +72,7 @@ void Project::parseProjectFile(std::filesystem::path projectPath) {
     }
 }
 
-void Project::addModule(std::string name, std::filesystem::__cxx11::path path) {
+void Project::addModule(std::string name, std::filesystem::path path) {
     std::cout << "Adding module " << name << " at path " << path << std::endl;
 
     try {
