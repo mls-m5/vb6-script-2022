@@ -35,9 +35,6 @@ the user.
 
 ## Lexer
 
-Visual basic only has single character operators (ie * or +). That makes
-the lexing relatively simple.
-
 ## Parsing
 
 
