@@ -43,3 +43,8 @@ the user.
 Values does not change type. In the original VB6, when not assigning a type
 to a variable it was "Variant" as default. Since I like strict types I will
 implement no such thing.
+
+## Licence
+
+GNU
+
