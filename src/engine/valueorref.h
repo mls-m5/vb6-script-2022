@@ -27,51 +27,21 @@ public:
     ValueOrRef(ValueOrRef &&) = default;
     ValueOrRef &operator=(ValueOrRef &&) = default;
 
-    ValueOrRef(Value value)
-        : value{std::move(value)} {}
-    ValueOrRef(Value *value)
-        : value{value} {}
-    ValueOrRef(FunctionRef ref)
-        : value{ref} {}
+    ValueOrRef(Value value);
+    ValueOrRef(Value *value);
+    ValueOrRef(FunctionRef ref);
 
-    Value &get() {
-        if (value.index() == 0) {
-            return std::get<0>(value);
-        }
-        else {
-            return *std::get<1>(value);
-        }
-    }
+    Value &get();
 
-    const Value &get() const {
-        if (value.index() == 0) {
-            return std::get<0>(value);
-        }
-        else {
-            return *std::get<1>(value);
-        }
-    }
+    const Value &get() const;
 
-    const FunctionRef &function() {
-        if (value.index() != 2) {
-            throw VBRuntimeError{"expression is not a function"};
-        }
-        return std::get<FunctionRef>(value);
-    }
+    const FunctionRef &function();
 
-    Value *operator->() {
-        return &get();
-    }
+    Value *operator->();
 
-    const Value *operator->() const {
-        return &get();
-    }
+    const Value *operator->() const;
 
-    Value &operator*() {
-        return get();
-    }
+    Value &operator*();
 
-    const Value &operator*() const {
-        return get();
-    }
+    const Value &operator*() const;
 };

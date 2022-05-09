@@ -41,17 +41,19 @@ struct StructT {
     }
 };
 
+class ArrayT;
+
 struct Type {
     enum TypeName {
         Integer,
         Long,
         Byte,
-        //        Boolean,
         Single,
         Double,
         String,
         Struct,
         Class,
+        Array,
     };
 
     TypeName type = Integer;
@@ -62,9 +64,11 @@ struct Type {
 using TypeVariantT = std::variant<IntegerT,
                                   LongT,
                                   ByteT,
-                                  //                                  BoolT,
                                   float,
                                   double,
                                   std::string,
                                   StructT,
-                                  std::shared_ptr<ClassInstance>>;
+                                  std::shared_ptr<ClassInstance>,
+                                  ArrayT>;
+
+#include "array.h"

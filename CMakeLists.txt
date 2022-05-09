@@ -14,6 +14,8 @@ add_library(
     src/engine/globalcontext.cpp
     src/engine/classinstance.cpp
     src/engine/module.cpp
+    src/engine/array.cpp
+    src/engine/valueorref.cpp
     src/code/lexer.cpp
     src/code/parser.cpp
     src/code/token.cpp

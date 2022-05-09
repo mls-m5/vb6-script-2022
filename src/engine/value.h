@@ -31,6 +31,8 @@ struct Value {
 
     Value(StructT i);
 
+    Value(ArrayT array);
+
     //! Set operation that also changes the type of the value
     void forceSet(Value &other);
 

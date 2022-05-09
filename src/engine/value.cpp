@@ -27,6 +27,9 @@ Value::Value(ClassT i)
 Value::Value(StructT i)
     : value{std::move(i)} {}
 
+Value::Value(ArrayT array)
+    : value(std::move(array)) {}
+
 void Value::forceSet(Value &other) {
     value = std::move(other.value);
 }
@@ -51,6 +54,9 @@ Value Value::create(Type type) {
         return Value{ClassT{}};
     case Type::Struct:
         return Value{StructT{type.classType}};
+    case Type::Array:
+        throw VBRuntimeError{
+            "cannot create array value without underlying type"};
     }
 
     throw VBRuntimeError{"invalid type"};
@@ -88,8 +94,8 @@ std::string Value::toString() const {
         return std::to_string(get<IntegerT>());
     case Type::Byte:
         return std::to_string(get<ByteT>());
-        //    case Type::Boolean:
-        //        return std::to_string(get<BoolT>());
+    case Type::Array:
+        throw VBRuntimeError{"could not convert array to string"};
     case Type::Class:
         throw VBRuntimeError{"could not convert class to string"};
     case Type::Struct:
@@ -114,6 +120,8 @@ LongT Value::toInteger() const {
         return get<IntegerT>();
     case Type::Byte:
         return get<ByteT>();
+    case Type::Array:
+        throw VBRuntimeError{"could not array class to integer"};
     case Type::Class:
         throw VBRuntimeError{"could not convert class to integer"};
     case Type::Struct:
@@ -137,10 +145,12 @@ DoubleT Value::toFloat() const {
         return get<IntegerT>();
     case Type::Byte:
         return get<ByteT>();
+    case Type::Array:
+        throw VBRuntimeError{"could not convert array to float"};
     case Type::Class:
-        throw VBRuntimeError{"could not convert class to integer"};
+        throw VBRuntimeError{"could not convert class to float"};
     case Type::Struct:
-        throw VBRuntimeError{"could not convert struct to integer"};
+        throw VBRuntimeError{"could not convert struct to float"};
     }
 
     return {};
@@ -149,9 +159,8 @@ DoubleT Value::toFloat() const {
 bool Value::isNumber() const {
     switch (typeName()) {
     case Type::String:
-        return false;
+    case Type::Array:
     case Type::Class:
-        return false;
     case Type::Struct:
         return false;
     default:
@@ -198,14 +207,14 @@ Value Value::negative() const {
         return -get<LongT>();
     case Type::Integer:
         return -get<IntegerT>();
-        //    case Type::Boolean:
-        //        return get<BoolT>();
     case Type::Byte:
         return -get<ByteT>();
+    case Type::Array:
+        throw VBRuntimeError{"could not negate array value"};
     case Type::Class:
-        throw VBRuntimeError{"could not negate class type"};
+        throw VBRuntimeError{"could not negate class value"};
     case Type::Struct:
-        throw VBRuntimeError{"could not negate struct type"};
+        throw VBRuntimeError{"could not negate struct value"};
     }
 
     return {};
