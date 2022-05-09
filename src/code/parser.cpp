@@ -192,10 +192,11 @@ Type::TypeName parseShorthandType(TokenPair &token) {
 //! 1 -> As statement
 //! 2 -> Shorthand type notation
 int isTypeDeclaration(TokenPair &token) {
-    if (token.type() == Token::As) {
+    switch (token.type()) {
+    case Token::As:
         return 1;
-    }
-    if (token.type() == Token::Operator) {
+
+    case Token::Operator: {
         auto content = token.content();
         if (content.size() != 1) {
             return 0;
@@ -204,7 +205,11 @@ int isTypeDeclaration(TokenPair &token) {
             return 2;
         }
     }
-    return 0;
+    case Token::ParenthesesBegin:
+        return 3;
+    default:
+        return 0;
+    }
 }
 
 int assertTypeDeclaration(TokenPair &token) {
@@ -217,6 +222,31 @@ int assertTypeDeclaration(TokenPair &token) {
             token.content()};
 }
 
+std::tuple<int, int> parseArrayDims(TokenPair &token) {
+    int lowerBound = 0;
+    int upperBound = 0;
+
+    assertEqual(token, Token::ParenthesesBegin, "(");
+    token.next();
+
+    try {
+        upperBound = std::stol(token.content());
+    }
+    catch (std::invalid_argument &e) {
+        throw VBParsingError{token.lastLoc,
+                             "invalid number " + token.content()};
+    }
+
+    token.next();
+    assertEqual(token, Token::ParenthesesEnd, "(");
+
+    token.next();
+
+    // Todo: Implement syntax for lower bound
+
+    return {lowerBound, upperBound};
+}
+
 TypeDescription parseAsStatement(TokenPair &token) {
     auto loc = token.first->loc;
 
@@ -224,6 +254,14 @@ TypeDescription parseAsStatement(TokenPair &token) {
 
     if (typeSyntax == 2) {
         return TypeDescription{Type{parseShorthandType(token)}};
+    }
+
+    bool isArray = false;
+    int lowerBound = 0;
+    int upperBound = 0;
+    if (typeSyntax == 3) {
+        isArray = true;
+        std::tie(lowerBound, upperBound) = parseArrayDims(token);
     }
 
     token.next();
@@ -904,23 +942,30 @@ ExpressionT parseFunctionCall(TokenPair &token,
             argExpressionList,
             function = static_cast<const Function *>(nullptr),
             loc = token.lastLoc](Context &context) mutable -> ValueOrRef {
-        auto ref = functionExpression(context).function();
-        function = ref.get();
-        if (!function) {
-            VBRuntimeError{"could not find function"};
+        auto fexp = functionExpression(context);
+        if (fexp->typeName() == Type::Array) {
+            auto arr = fexp->get<ArrayT>();
+            return &arr.at(argExpressionList.front()(context)->toInteger());
         }
-        if (argExpressionList.size() > function->arguments().size()) {
-            VBParsingError{loc,
-                           "to many argument for function " +
-                               std::string{function->name()}};
+        else {
+            auto ref = fexp.function();
+            function = ref.get();
+            if (!function) {
+                VBRuntimeError{"could not find function"};
+            }
+            if (argExpressionList.size() > function->arguments().size()) {
+                VBParsingError{loc,
+                               "to many argument for function " +
+                                   std::string{function->name()}};
+            }
+
+            // TODO: Cache static function calls
+
+            auto args = evaluateArgumentList(
+                argExpressionList, function->arguments(), context);
+
+            return function->call(args, ref.me, context);
         }
-
-        // TODO: Cache static function calls
-
-        auto args = evaluateArgumentList(
-            argExpressionList, function->arguments(), context);
-
-        return function->call(args, ref.me, context);
     };
 }
 
