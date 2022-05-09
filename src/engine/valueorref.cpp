@@ -10,6 +10,19 @@ ValueOrRef::ValueOrRef(Value *value)
 ValueOrRef::ValueOrRef(FunctionRef ref)
     : value{ref} {}
 
+bool ValueOrRef::isFunction() {
+    return value.index() == 2;
+}
+
+bool ValueOrRef::isArray() {
+    if (value.index() == 0 || value.index() == 1) {
+        if (get().typeName() == Type::Array) {
+            return true;
+        }
+    }
+    return false;
+}
+
 Value &ValueOrRef::get() {
     if (value.index() == 0) {
         return std::get<0>(value);

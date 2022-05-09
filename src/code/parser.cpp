@@ -204,12 +204,14 @@ int isTypeDeclaration(TokenPair &token) {
         if (isShorthandType(content.front())) {
             return 2;
         }
+        break;
     }
     case Token::ParenthesesBegin:
         return 3;
     default:
         return 0;
     }
+    return 0;
 }
 
 int assertTypeDeclaration(TokenPair &token) {
@@ -943,7 +945,7 @@ ExpressionT parseFunctionCall(TokenPair &token,
             function = static_cast<const Function *>(nullptr),
             loc = token.lastLoc](Context &context) mutable -> ValueOrRef {
         auto fexp = functionExpression(context);
-        if (fexp->typeName() == Type::Array) {
+        if (fexp.isArray()) {
             auto arr = fexp->get<ArrayT>();
             return &arr.at(argExpressionList.front()(context)->toInteger());
         }

@@ -56,12 +56,17 @@ TEST_CASE("basic function call") {
 TEST_CASE("basic function body") {
     auto body = FunctionBody{};
 
+    auto f =
+        Function{"hello", FunctionArguments{{}}, Type{Type::Integer}, true};
+
     body.pushCommand(
         [](Context &context) {
             context.returnValue = IntegerT{20};
             return ReturnT::Standard;
         },
         0);
+
+    body.function(&f);
 
     auto globalContext = GlobalContext{};
     auto dummyContext = Context{globalContext};

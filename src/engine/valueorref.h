@@ -31,6 +31,9 @@ public:
     ValueOrRef(Value *value);
     ValueOrRef(FunctionRef ref);
 
+    bool isFunction();
+    bool isArray();
+
     Value &get();
 
     const Value &get() const;

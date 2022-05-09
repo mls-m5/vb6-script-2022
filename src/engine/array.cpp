@@ -10,7 +10,8 @@ ArrayT &ArrayT::operator=(ArrayT &&) = default;
 
 ArrayT::~ArrayT() = default;
 
-ArrayT::ArrayT(Type type, int upperBound, int lowerBound) {
+ArrayT::ArrayT(Type type, int upperBound, int lowerBound)
+    : type{type} {
     values.resize(upperBound - lowerBound, Value::create(type));
     lowerBound = lowerBound;
 }
