@@ -11,8 +11,8 @@ struct Value {
     Value(const Value &) = default;
 
     // TODO: Do so these functions refuses to change type
-    Value &operator=(Value &&) = default;
-    Value &operator=(const Value &) = default;
+    Value &operator=(Value &&);
+    Value &operator=(const Value &);
     ~Value() = default;
 
     bool operator==(const Value &other) const;
@@ -47,6 +47,9 @@ struct Value {
     const T &get() const {
         return std::get<T>(value);
     }
+
+    //! Set and ignore value test
+    void forceSet(Value value);
 
     Type::TypeName typeName() const;
 

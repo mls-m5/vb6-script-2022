@@ -35,6 +35,7 @@ TEST_CASE("basic function call") {
                          },
                      },
                  },
+                 Type{Type::Integer},
                  true};
 
     f.body(lambda);

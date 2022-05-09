@@ -284,6 +284,7 @@ FunctionArguments parseArguments(TokenPair &token) {
 
     for (bool shouldContinue = true; shouldContinue;) {
         if (token.content() == ")") {
+            token.next();
             return args;
         }
 
@@ -330,6 +331,8 @@ FunctionArguments parseArguments(TokenPair &token) {
             token.next();
         }
     }
+
+    token.next();
 
     return args;
 }
@@ -633,9 +636,9 @@ ExpressionT parseBinary(ExpressionT first,
 
     if (currentType == Token::Is) {
         expr = [first, second](Context &context) -> ValueOrRef {
-            auto val1 = first(context).get();
-            auto val2 = second(context).get();
-            return Value{val1.get<ClassT>() == val2.get<ClassT>()};
+            auto val1 = first(context).get().get<ClassT>();
+            auto val2 = second(context).get().get<ClassT>();
+            return Value{val1 == val2};
         };
     }
     else {
@@ -1511,12 +1514,18 @@ std::unique_ptr<Function> parseFunction(Line **line,
     token.next();
     auto arguments = parseArguments(token);
 
+    auto returnType = Type{Type::Integer}; // Default for sub
+
+    if (token.type() == Token::As) {
+        returnType = parseAsStatement(token).type;
+    }
+
     bool isStatic = static_cast<bool>(token.currentModule->classType);
     auto body = std::make_shared<FunctionBody>();
 
     token.currentFunctionBody = body.get();
-    auto function =
-        std::make_unique<Function>(name, std::move(arguments), isStatic);
+    auto function = std::make_unique<Function>(
+        name, std::move(arguments), returnType, isStatic);
     body->function(function.get());
 
     body->pushCommand(parseBlock(line,

@@ -49,12 +49,19 @@ Value FunctionBody::call(const FunctionArgumentValues &args,
         context.globalContext, _localVariables, args, context.module, me};
 
     local.functionBody = this;
+    local.returnValue.forceSet(Value::create(_function->returnType()));
 
     for (size_t i = 0; i < _commands.size(); ++i) {
         auto &command = _commands.at(i);
         auto line = _line.at(i);
         local.line = line;
-        command(local);
+        try {
+            command(local);
+        }
+        catch (std::runtime_error &e) {
+            throw VBRuntimeError{"in " + local.currentLocation().toString() +
+                                 ":\n" + e.what()};
+        }
     }
 
     return local.returnValue;

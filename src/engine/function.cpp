@@ -4,9 +4,13 @@
 #include "vbruntimeerror.h"
 #include <iostream>
 
-Function::Function(std::string name, FunctionArguments args, bool isStatic)
+Function::Function(std::string name,
+                   FunctionArguments args,
+                   Type returnType,
+                   bool isStatic)
     : _name{std::move(name)}
     , _arguments{std::move(args)}
+    , _returnType(returnType)
     , _isStatic{isStatic} {}
 
 Value Function::call(const FunctionArgumentValues &args,
@@ -40,4 +44,8 @@ int Function::argumentIndex(std::string_view name) const {
 
 void Function::body(FuncT f) {
     _f = f;
+}
+
+const Type &Function::returnType() const {
+    return _returnType;
 }

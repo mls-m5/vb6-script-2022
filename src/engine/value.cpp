@@ -30,6 +30,84 @@ Value::Value(StructT i)
 Value::Value(ArrayT array)
     : value(std::move(array)) {}
 
+Value &Value::operator=(Value &&other) {
+    if (other.value.index() == value.index()) {
+        value = std::move(other.value);
+        return *this;
+    }
+
+    switch (typeName()) {
+    case Type::String:
+        value = other.toString();
+        break;
+    case Type::Single:
+        value = static_cast<SingleT>(other.toFloat());
+        break;
+    case Type::Double:
+        value = static_cast<DoubleT>(other.toFloat());
+        break;
+    case Type::Long:
+        value = static_cast<LongT>(other.toInteger());
+        break;
+    case Type::Integer:
+        value = static_cast<IntegerT>(other.toInteger());
+        break;
+    case Type::Byte:
+        value = static_cast<ByteT>(other.toInteger());
+        break;
+    case Type::Class:
+        value = other.get<ClassT>();
+        break;
+    case Type::Struct:
+        value = other.get<StructT>();
+        break;
+    case Type::Array:
+        value = other.get<ArrayT>();
+        break;
+    }
+
+    return *this;
+}
+
+Value &Value::operator=(const Value &other) {
+    if (other.value.index() == value.index()) {
+        value = other.value;
+        return *this;
+    }
+
+    switch (typeName()) {
+    case Type::String:
+        value = other.toString();
+        break;
+    case Type::Single:
+        value = static_cast<SingleT>(other.toFloat());
+        break;
+    case Type::Double:
+        value = static_cast<DoubleT>(other.toFloat());
+        break;
+    case Type::Long:
+        value = static_cast<LongT>(other.toInteger());
+        break;
+    case Type::Integer:
+        value = static_cast<IntegerT>(other.toInteger());
+        break;
+    case Type::Byte:
+        value = static_cast<ByteT>(other.toInteger());
+        break;
+    case Type::Class:
+        value = other.get<ClassT>();
+        break;
+    case Type::Struct:
+        value = other.get<StructT>();
+        break;
+    case Type::Array:
+        value = other.get<ArrayT>();
+        break;
+    }
+
+    return *this;
+}
+
 void Value::forceSet(Value &other) {
     value = std::move(other.value);
 }
@@ -48,8 +126,6 @@ Value Value::create(Type type) {
         return Value{IntegerT{0}};
     case Type::Byte:
         return Value{ByteT{0}};
-        //    case Type::Boolean:
-        //        return Value{BoolT{0}};
     case Type::Class:
         return Value{ClassT{}};
     case Type::Struct:
@@ -60,6 +136,10 @@ Value Value::create(Type type) {
     }
 
     throw VBRuntimeError{"invalid type"};
+}
+
+void Value::forceSet(Value value) {
+    this->value = std::move(value.value);
 }
 
 Type::TypeName Value::typeName() const {
@@ -74,7 +154,11 @@ Type Value::type() const {
         classType = get<StructT>().get()->type();
     }
     else if (type == Type::Class) {
-        classType = get<ClassT>().get()->type();
+        auto c = get<ClassT>().get();
+        if (!c) {
+            throw VBRuntimeError{"trying to access membor of null value"};
+        }
+        classType = c->type();
     }
 
     return {type, classType};

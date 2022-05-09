@@ -28,9 +28,13 @@ private:
     FunctionArguments _arguments;
     FuncT _f;
     bool _isStatic = true;
+    Type _returnType;
 
 public:
-    Function(std::string name, FunctionArguments args, bool isStatic);
+    Function(std::string name,
+             FunctionArguments args,
+             Type returnType,
+             bool isStatic);
 
     Value call(const FunctionArgumentValues &args,
                Value me,
@@ -43,4 +47,6 @@ public:
     int argumentIndex(std::string_view name) const;
 
     void body(FuncT f);
+
+    const Type &returnType() const;
 };

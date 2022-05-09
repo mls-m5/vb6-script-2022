@@ -11,7 +11,7 @@ struct ModuleList : std::vector<std::shared_ptr<class Module>> {};
 
 class GlobalContext {
 private:
-    Value _err;
+    Value _err = Value{Type::Integer};
 
     bool _disableEnd = false;
 

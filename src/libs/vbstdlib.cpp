@@ -9,8 +9,8 @@ void loadVbStdLib(GlobalContext &global) {
     auto &stdMod = createSimModule("builtin/std.bas", global);
 
     // TODO: Add arguments later
-    auto function =
-        std::make_unique<Function>("MsgBox", FunctionArguments{}, true);
+    auto function = std::make_unique<Function>(
+        "MsgBox", FunctionArguments{}, Type{Type::Integer}, true);
 
     stdMod.addFunction(std::move(function));
 }

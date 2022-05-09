@@ -1,7 +1,7 @@
 #pragma once
-#include "location.h"
 #include "context.h"
 #include "function.h"
+#include "location.h"
 #include "variabledescription.h"
 #include <vector>
 
@@ -46,7 +46,7 @@ private:
     std::vector<CommandT> _commands;
     std::vector<size_t> _line;
 
-    Value _returnValue;
+    //    Value _returnValue;
     Function *_function;
 
 public:

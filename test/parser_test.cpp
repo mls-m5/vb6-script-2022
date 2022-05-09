@@ -78,6 +78,7 @@ End Sub
                 FunctionArgument{Type{Type::Integer}, "x"},
                 FunctionArgument{Type{Type::Integer}, "y"},
             }},
+            Type{Type::Integer},
             true))
         .body(inner);
 
