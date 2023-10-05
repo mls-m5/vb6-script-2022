@@ -30,10 +30,10 @@ using ExpressionT = std::function<ValueOrRef(Context &)>;
 using IdentifierFuncT = std::function<ValueOrRef(Context &context)>;
 
 // Contains the current state of the parser
-struct TokenPair {
-    TokenPair() = default;
-    TokenPair(const TokenPair &) = delete;
-    TokenPair &operator=(const TokenPair &) = delete;
+struct State {
+    State() = default;
+    State(const State &) = delete;
+    State &operator=(const State &) = delete;
 
     NextTokenT f;
 
@@ -51,7 +51,7 @@ struct TokenPair {
         currentFunctionBody = nullptr;
     }
 
-    TokenPair &next() {
+    State &next() {
         std::tie(first, second) = f();
         if (first) {
             lastLoc = first->loc;
@@ -109,22 +109,22 @@ struct TokenPair {
     }
 };
 
-ExpressionT parseExpression(TokenPair &token, bool ignoreBinary = false);
+ExpressionT parseExpression(State &token, bool ignoreBinary = false);
 
 [[nodiscard]] FunctionBody::CommandT parseBlock(
     Line **line,
-    TokenPair &token,
+    State &token,
     NextLineT nextLine,
     std::function<bool(Token::Keyword)> endCondition,
     bool shouldConsumeEnd = true);
 
-[[nodiscard]] IdentifierFuncT parseWithAccessor(TokenPair &token);
+[[nodiscard]] IdentifierFuncT parseWithAccessor(State &token);
 
-[[nodiscard]] ExpressionT parseFunctionCall(TokenPair &token,
+[[nodiscard]] ExpressionT parseFunctionCall(State &token,
                                             ExpressionT functionExpression);
 
 [[nodiscard]] ExpressionT parseBinary(ExpressionT first,
-                                      TokenPair &token,
+                                      State &token,
                                       int previousPrecedence = 1000);
 
 void parseAssert(bool condition,
@@ -135,14 +135,14 @@ void parseAssert(bool condition,
     }
 }
 
-void assertEmpty(TokenPair &token) {
+void assertEmpty(State &token) {
     if (token) {
         throw VBParsingError{token.lastLoc,
                              "Expected end of line, got " + token.content()};
     }
 };
 
-void assertEqual(TokenPair &token,
+void assertEqual(State &token,
                  Token::Keyword type,
                  const std::string &shownName = "") {
     if (token.type() != type) {
@@ -172,7 +172,7 @@ bool isShorthandType(char c) {
     return shorthandCharacters.find(c) != std::string::npos;
 }
 
-Type::TypeName parseShorthandType(TokenPair &token) {
+Type::TypeName parseShorthandType(State &token) {
 
     auto content = token.content();
     if (content.size() != 1) {
@@ -192,7 +192,7 @@ Type::TypeName parseShorthandType(TokenPair &token) {
 //! 0 -> Not type declaration
 //! 1 -> As statement
 //! 2 -> Shorthand type notation
-int isTypeDeclaration(TokenPair &token) {
+int isTypeDeclaration(State &token) {
     switch (token.type()) {
     case Token::As:
         return 1;
@@ -215,7 +215,7 @@ int isTypeDeclaration(TokenPair &token) {
     return 0;
 }
 
-int assertTypeDeclaration(TokenPair &token) {
+int assertTypeDeclaration(State &token) {
     if (auto ret = isTypeDeclaration(token)) {
         return ret;
     }
@@ -225,7 +225,7 @@ int assertTypeDeclaration(TokenPair &token) {
             token.content()};
 }
 
-std::tuple<int, int> parseArrayDims(TokenPair &token) {
+std::tuple<int, int> parseArrayDims(State &token) {
     int lowerBound = 0;
     int upperBound = 0;
 
@@ -250,7 +250,7 @@ std::tuple<int, int> parseArrayDims(TokenPair &token) {
     return {lowerBound, upperBound};
 }
 
-TypeDescription parseAsStatement(TokenPair &token) {
+TypeDescription parseAsStatement(State &token) {
     auto loc = token.first->loc;
 
     auto typeSyntax = assertTypeDeclaration(token);
@@ -310,7 +310,7 @@ TypeDescription parseAsStatement(TokenPair &token) {
 
 //! For example
 //! Sub Hello(There As String, ByRef You as Integer, Optional ByVal Ref)
-FunctionArguments parseArguments(TokenPair &token) {
+FunctionArguments parseArguments(State &token) {
     if (!token || token.first->content != "(") {
         throw VBParsingError{token.lastLoc,
                              "expected character '(' got " + token.content()};
@@ -378,7 +378,7 @@ FunctionArguments parseArguments(TokenPair &token) {
     return args;
 }
 
-IdentifierFuncT parseMemberAccessor(TokenPair &token, IdentifierFuncT base) {
+IdentifierFuncT parseMemberAccessor(State &token, IdentifierFuncT base) {
     token.next();
 
     auto name = token.content();
@@ -440,7 +440,7 @@ IdentifierFuncT getLocalIdentifier(std::string_view name, FunctionBody *body) {
     return {};
 }
 
-IdentifierFuncT parseIdentifier(TokenPair &token) {
+IdentifierFuncT parseIdentifier(State &token) {
     auto loc = token.first->loc;
     auto name = token.content();
 
@@ -508,7 +508,7 @@ IdentifierFuncT parseIdentifier(TokenPair &token) {
     return expr;
 }
 
-ExpressionT parseNew(TokenPair &token) {
+ExpressionT parseNew(State &token) {
     token.next();
 
     if (token.type() != Token::Word) {
@@ -601,7 +601,7 @@ std::pair<std::function<T(T, T)>, int> getOperator(std::string name) {
 #undef DEFINE_BINARY_OPERATOR
 }
 
-ExpressionT parseUnary(TokenPair &token, int previousPrecedence = 1000) {
+ExpressionT parseUnary(State &token, int previousPrecedence = 1000) {
     auto op = token.content();
     auto opType = token.type();
     token.next();
@@ -662,7 +662,7 @@ ExpressionT parseUnary(TokenPair &token, int previousPrecedence = 1000) {
 }
 
 ExpressionT parseBinary(ExpressionT first,
-                        TokenPair &token,
+                        State &token,
                         int previousPrecedence) {
 
     auto expr = ExpressionT{};
@@ -733,7 +733,7 @@ ExpressionT parseBinary(ExpressionT first,
     return expr;
 }
 
-ExpressionT parseParentheses(TokenPair &token) {
+ExpressionT parseParentheses(State &token) {
     token.next();
 
     auto expr = parseExpression(token);
@@ -744,7 +744,7 @@ ExpressionT parseParentheses(TokenPair &token) {
     return expr;
 }
 
-ExpressionT parseExpression(TokenPair &token, bool ignoreBinary) {
+ExpressionT parseExpression(State &token, bool ignoreBinary) {
     auto keyword = token.type();
 
     ExpressionT expr;
@@ -857,7 +857,7 @@ ExpressionT parseExpression(TokenPair &token, bool ignoreBinary) {
     }
 }
 
-std::vector<ExpressionT> parseList(TokenPair &token) {
+std::vector<ExpressionT> parseList(State &token) {
     auto list = std::vector<ExpressionT>{};
 
     if (!token.first || token.type() == Token::ParenthesesEnd) {
@@ -937,7 +937,7 @@ FunctionArgumentValues evaluateArgumentList(
     return values;
 }
 
-ExpressionT parseFunctionCall(TokenPair &token,
+ExpressionT parseFunctionCall(State &token,
                               ExpressionT functionExpression) {
     auto argExpressionList = parseList(token);
 
@@ -972,7 +972,7 @@ ExpressionT parseFunctionCall(TokenPair &token,
     };
 }
 
-CommandT parseExitStatement(TokenPair &token) {
+CommandT parseExitStatement(State &token) {
     token.next();
 
     switch (token.type()) {
@@ -991,7 +991,7 @@ CommandT parseExitStatement(TokenPair &token) {
     }
 }
 
-CommandT parseContinue(TokenPair &token) {
+CommandT parseContinue(State &token) {
     token.next();
 
     switch (token.type()) {
@@ -1005,7 +1005,7 @@ CommandT parseContinue(TokenPair &token) {
     }
 }
 
-void parseLocalVariableDeclaration(TokenPair &token) {
+void parseLocalVariableDeclaration(State &token) {
     if (!token.currentFunctionBody) {
         throw VBInternalParsingError{*token.first, "no function body"};
     }
@@ -1025,7 +1025,7 @@ void parseLocalVariableDeclaration(TokenPair &token) {
     } while (token.content() == "," && (token.next(), true));
 }
 
-void parseMemberDeclaration(TokenPair &token) {
+void parseMemberDeclaration(State &token) {
     auto loc = token.first->loc;
     if (token.type() != Token::Word) {
         token.next();
@@ -1052,13 +1052,13 @@ void parseMemberDeclaration(TokenPair &token) {
     }
 }
 
-void parseMemberDeclarationList(TokenPair &token) {
+void parseMemberDeclarationList(State &token) {
     parseMemberDeclaration(token);
 
     // TODO: Loop for all declarations on line
 }
 
-FunctionBody::CommandT parseAssignment(TokenPair &token,
+FunctionBody::CommandT parseAssignment(State &token,
                                        IdentifierFuncT target,
                                        bool isSetStatement) {
     auto loc = token.first->loc;
@@ -1089,7 +1089,7 @@ FunctionBody::CommandT parseAssignment(TokenPair &token,
 
 //! A command is a line inside a function that starts at the beginning of the
 //! line
-FunctionBody::CommandT parseCommand(TokenPair &token) {
+FunctionBody::CommandT parseCommand(State &token) {
     switch (token.type()) {
     case Token::Print: {
         parseAssert(token.second, *token.first, "expected expression");
@@ -1160,7 +1160,7 @@ FunctionBody::CommandT parseCommand(TokenPair &token) {
 
 void parseStruct(Line *line,
                  Scope scope,
-                 TokenPair &token,
+                 State &token,
                  NextLineT nextLine) {
     token.next();
     auto name = token.content();
@@ -1192,7 +1192,7 @@ void parseStruct(Line *line,
 }
 
 FunctionBody::CommandT parseSelectCase(Line **line,
-                                       TokenPair &token,
+                                       State &token,
                                        NextLineT nextLine) {
     token.next();
     if (token.type() != Token::Case) {
@@ -1268,7 +1268,7 @@ FunctionBody::CommandT parseSelectCase(Line **line,
 }
 
 FunctionBody::CommandT parseIfStatement(Line **line,
-                                        TokenPair &token,
+                                        State &token,
                                         NextLineT nextLine) {
     auto codeBlock = FunctionBody::CommandT{};
 
@@ -1347,7 +1347,7 @@ FunctionBody::CommandT parseIfStatement(Line **line,
 }
 
 FunctionBody::CommandT parseForStatement(Line **line,
-                                         TokenPair &token,
+                                         State &token,
                                          NextLineT nextLine) {
 
     token.next();
@@ -1456,7 +1456,7 @@ FunctionBody::CommandT parseForStatement(Line **line,
     throw VBParsingError{token.lastLoc, "for loops not implementede yet"};
 }
 
-CommandT parseWith(TokenPair &token) {
+CommandT parseWith(State &token) {
     token.next();
     auto identifier = parseIdentifier(token);
     token.isWithStatement = true;
@@ -1471,7 +1471,7 @@ CommandT parseWith(TokenPair &token) {
 //! With X
 //!     .X = 1  <-- this
 //! End With
-IdentifierFuncT parseWithAccessor(TokenPair &token) {
+IdentifierFuncT parseWithAccessor(State &token) {
     auto withIdentifier = [](Context &context) -> ValueOrRef {
         return context.with;
     };
@@ -1480,7 +1480,7 @@ IdentifierFuncT parseWithAccessor(TokenPair &token) {
 
 FunctionBody::CommandT parseBlock(
     Line **line,
-    TokenPair &token,
+    State &token,
     NextLineT nextLine,
     std::function<bool(Token::Keyword)> endCondition,
     bool consumeEnd) {
@@ -1554,7 +1554,7 @@ FunctionBody::CommandT parseBlock(
 
 std::unique_ptr<Function> parseFunction(Line **line,
                                         Scope scope,
-                                        TokenPair &token,
+                                        State &token,
                                         NextLineT nextLine) {
 
     token.next();
@@ -1608,7 +1608,7 @@ Module &parseGlobal(Line *line,
 
     for (; line;) {
         currentScope = Private;
-        TokenPair token{};
+        State token{};
         token.f = nextToken;
         token.currentModule = &module;
         token.next();
