@@ -14,6 +14,7 @@
 #include <functional>
 #include <iostream>
 #include <map>
+#include <optional>
 
 namespace {
 
@@ -532,7 +533,7 @@ std::pair<std::function<T(T, T)>, int> getOperator(std::string name) {
 
 #define DEFINE_BINARY_OPERATOR(x, precedence)                                  \
     {                                                                          \
-#x, {                                                                  \
+        #x, {                                                                  \
             [](T first, T second) -> T { return first x second; }, precedence  \
         }                                                                      \
     }
